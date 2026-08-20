@@ -87,11 +87,11 @@ const STANDARD_ACADEMIC_FEATURES = [
 ];
 const INSTITUTION_META: Record<InstitutionType, { tagline: string; features: string[] }> = {
   mahad: {
-    tagline: 'Islamic seminary or full-time program',
+    tagline: 'Seminary or full-time program',
     features: STANDARD_ACADEMIC_FEATURES,
   },
   madrasa: {
-    tagline: 'Part-time or weekend Islamic school',
+    tagline: 'Part-time or weekend school',
     features: STANDARD_ACADEMIC_FEATURES,
   },
   markaz: {
@@ -297,12 +297,12 @@ function SchoolTypeCard({
           </Text>
 
           <View style={typeCard.iconWrap}>
-            <Icon size={22} color="#FFFFFF" strokeWidth={1.8} />
+            <Icon size={17} color="#FFFFFF" strokeWidth={1.8} />
           </View>
 
           {selected ? (
             <View style={typeCard.checkBadge}>
-              <Check size={13} color={TYPE_GRADIENTS[option.type][1]} strokeWidth={3} />
+              <Check size={12} color={TYPE_GRADIENTS[option.type][1]} strokeWidth={3} />
             </View>
           ) : null}
         </LinearGradient>
@@ -836,45 +836,52 @@ const preview = StyleSheet.create({
 
 const typeCard = StyleSheet.create({
   label: { fontSize: 12.5, fontWeight: '600', color: SUBTLE, marginBottom: 8 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   // Shadow (elevation, on Android) stays on this outer wrapper, never on the
   // clipped gradient card below it - see SchoolTypeCard's doc comment.
   wrap: { width: '48%', borderRadius: RADIUS.lg, ...SHADOW.level1 },
   card: {
-    minHeight: 150,
+    minHeight: 108,
     borderRadius: RADIUS.lg,
-    padding: 16,
+    padding: 12,
     justifyContent: 'space-between',
     overflow: 'hidden',
+    // Always a 3px border, just transparent when unselected - selection
+    // then only ever changes borderColor, never borderWidth. On Android, a
+    // clipped (overflow:hidden + radius) view whose borderWidth changes
+    // between 0 and non-zero can drop its children on that re-render; a
+    // constant border width sidesteps the whole bug.
+    borderWidth: 3,
+    borderColor: 'transparent',
   },
-  cardSelected: { borderWidth: 3, borderColor: '#FFFFFF' },
+  cardSelected: { borderColor: '#FFFFFF' },
   badge: {
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(255,255,255,0.25)',
     borderRadius: RADIUS.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
   },
-  badgeText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' },
-  tagline: { color: '#FFFFFF', fontSize: 13.5, fontWeight: '800', lineHeight: 18, marginTop: 12, marginRight: 40 },
+  badgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+  tagline: { color: '#FFFFFF', fontSize: 12.5, fontWeight: '800', lineHeight: 16, marginTop: 8, marginRight: 34 },
   iconWrap: {
     position: 'absolute',
-    right: 14,
-    bottom: 14,
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    right: 10,
+    bottom: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkBadge: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    top: 8,
+    right: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
