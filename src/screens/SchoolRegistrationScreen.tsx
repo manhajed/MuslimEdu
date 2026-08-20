@@ -940,13 +940,13 @@ const success = StyleSheet.create({
 const pill = StyleSheet.create({
   input: {
     backgroundColor: '#EEF1EF',
-    borderRadius: RADIUS.pill,
+    borderRadius: RADIUS.sm,
     paddingHorizontal: 18,
     paddingVertical: 14,
     fontSize: 15,
     color: INK,
   },
-  inputMultiline: { borderRadius: RADIUS.lg, minHeight: 76, textAlignVertical: 'top', paddingTop: 14 },
+  inputMultiline: { minHeight: 76, textAlignVertical: 'top', paddingTop: 14 },
 });
 
 const verify = StyleSheet.create({
