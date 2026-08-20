@@ -886,7 +886,7 @@ const typeCard = StyleSheet.create({
     paddingVertical: 6,
   },
   badgeText: { color: '#FFFFFF', fontSize: 12.5, fontWeight: '700' },
-  tagline: { color: '#FFFFFF', fontSize: 15, fontWeight: '800', lineHeight: 20, marginTop: 14, marginRight: 44 },
+  tagline: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', lineHeight: 16, marginTop: 14, marginRight: 44 },
   iconWrap: {
     position: 'absolute',
     right: 16,
