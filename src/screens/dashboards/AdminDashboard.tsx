@@ -1031,12 +1031,13 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
 
         {/* White body panel - rounded top edge rides up over the dark layer */}
         <View style={styles.body}>
-          <SyncStatusCard />
           {/* Visible read-only status for the platform subscription that
               gates gradingSystems/examCategories/gradebookReview below -
               previously those cards just locked silently with no way for
               the admin to see WHY (package, expiry, days left). Set by the
-              superadmin from SuperAdminSchoolSubscription. */}
+              superadmin from SuperAdminSchoolSubscription. Leads the stack
+              (its own dark/highlight card) since it's the more actionable
+              of the two - SyncStatusCard is a plainer status readout below it. */}
           <SubscriptionStatusCard
             status={subscriptionStatus}
             loadFailed={subscriptionStatusError}
@@ -1044,6 +1045,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
             onSubscribePress={() => (navigation as any).navigate('SubscribeRequest')}
             onDetailsPress={() => (navigation as any).navigate('SubscriptionDetails')}
           />
+          <SyncStatusCard />
           <Text style={styles.sectionLabel}>{t('admin_dashboard.manage_section', 'Manage')}</Text>
 
           {/* Live filter over the grouped lists below - hero/bento hide while
