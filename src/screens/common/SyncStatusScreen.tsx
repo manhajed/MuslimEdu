@@ -56,6 +56,11 @@ const TINT = {
 } as const;
 type Tint = keyof typeof TINT;
 
+// Download/upload glyphs read as black against every tint square (was
+// white) - the tint itself still carries the wayfinding, the glyph doesn't
+// need to fight it for attention.
+const ICON_INK = '#111827';
+
 // Every prefix scanCachedDatasets can return (see utils/syncStatus.ts) -
 // grouped by what kind of data it is, not by which role sees it.
 const DATASET_TINTS: Record<string, Tint> = {
@@ -201,9 +206,9 @@ export default function SyncStatusScreen() {
               {datasets.map((d) => {
                 const tint = TINT[DATASET_TINTS[d.key] ?? 'emerald'];
                 return (
-                  <View key={d.key} style={[styles.itemCard, { backgroundColor: tint + '14', borderColor: tint + '33' }]}>
+                  <View key={d.key} style={styles.itemCard}>
                     <View style={[styles.itemIconWrap, { backgroundColor: tint }]}>
-                      <IconDownload color="#FFFFFF" />
+                      <IconDownload color={ICON_INK} />
                     </View>
                     <View style={styles.itemTextWrap}>
                       <Text style={styles.itemTitle} numberOfLines={1}>{d.label}</Text>
@@ -239,9 +244,9 @@ export default function SyncStatusScreen() {
               const hasError = list.some((a) => a.lastError);
               const tint = hasError ? theme.danger : TINT[PENDING_TINTS[kind] ?? 'gray'];
               return (
-                <View key={kind} style={[styles.itemCard, { backgroundColor: tint + '14', borderColor: tint + '33' }]}>
+                <View key={kind} style={styles.itemCard}>
                   <View style={[styles.itemIconWrap, { backgroundColor: tint }]}>
-                    <IconUpload color="#FFFFFF" />
+                    <IconUpload color={ICON_INK} />
                   </View>
                   <View style={styles.itemTextWrap}>
                     <Text style={styles.itemTitle} numberOfLines={1}>{ACTION_LABELS[kind] ?? kind}</Text>
@@ -325,15 +330,16 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     },
     emptyText: { fontSize: 12.5, color: theme.textSecondary, lineHeight: 18 },
 
-    // Each row is its own tinted card (soft category-colored background +
-    // matching hairline) instead of a shared white list - the color itself
-    // is the wayfinding, not just the icon square inside it.
+    // Plain surface row (no per-category tint/border) - the icon square's
+    // own color is the only wayfinding now, not the whole card.
     itemCard: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
+      backgroundColor: theme.surface,
       borderRadius: RADIUS.lg,
       borderWidth: 1,
+      borderColor: theme.border,
       padding: 12,
     },
     itemIconWrap: {
