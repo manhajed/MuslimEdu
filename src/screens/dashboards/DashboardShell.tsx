@@ -252,7 +252,10 @@ const styles = StyleSheet.create({
     marginTop: -18,
     paddingHorizontal: 20,
     paddingTop: 26,
-    paddingBottom: 110,
+    // Just breathing room under the last row. The old 110 dated from when
+    // the tab bar floated over the content; it lays out inline below the
+    // screen now, so that much padding only read as dead space.
+    paddingBottom: 24,
   },
 });
 
