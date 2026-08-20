@@ -1,0 +1,212 @@
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { CirclePlus, X } from 'lucide-react-native';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { PickedPhoto } from '../services/orphanService';
+import { SHADOW } from '../theme/spatial';
+import { preparePostPhoto, InvalidPhotoTypeError, formatBytes, MAX_PHOTO_BYTES } from '../utils/imagePrep';
+
+const EMERALD = '#1FAE64';
+const EMERALD_SOFT = '#E5F8F5';
+const INK = '#1C1C1E';
+const SUBTLE = '#8A9099';
+const HAIRLINE = '#EDEEF0';
+const CANVAS = '#F6F7F9';
+
+export function NoteInput({
+  value,
+  onChange,
+  maxLength = 500,
+  placeholder = 'Write your summary...',
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  maxLength?: number;
+  placeholder?: string;
+}) {
+  return (
+    <View>
+      <View style={styles.noteBox}>
+        <TextInput
+          style={styles.noteInput}
+          multiline
+          placeholder={placeholder}
+          placeholderTextColor={SUBTLE}
+          value={value}
+          onChangeText={(t) => onChange(t.slice(0, maxLength))}
+          maxLength={maxLength}
+        />
+      </View>
+      <Text style={styles.noteCounter}>
+        {value.length} / {maxLength}
+      </Text>
+    </View>
+  );
+}
+
+export function RatingSelector({
+  value,
+  onChange,
+  labels,
+}: {
+  value: number | null;
+  onChange: (v: number) => void;
+  labels: Record<number, string>;
+}) {
+  return (
+    <View style={styles.ratingRow}>
+      {[1, 2, 3, 4, 5].map((n) => {
+        const selected = value === n;
+        return (
+          <TouchableOpacity key={n} style={styles.ratingCell} onPress={() => onChange(n)} activeOpacity={0.8}>
+            <View style={[styles.ratingCircle, selected && styles.ratingCircleActive]}>
+              <Text style={[styles.ratingNum, selected && styles.ratingNumActive]}>{n}</Text>
+            </View>
+            {labels[n] ? <Text style={styles.ratingLabel}>{labels[n]}</Text> : <View style={styles.ratingLabelSpacer} />}
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+function IconPlusCircle() {
+  return <CirclePlus color={EMERALD} size={22} strokeWidth={1.8} />;
+}
+function IconClose() {
+  return <X color="#FFF" size={14} strokeWidth={2.4} />;
+}
+
+export function PhotoPicker({
+  photos,
+  onChange,
+  maxPhotos = 20,
+  required = false,
+}: {
+  photos: PickedPhoto[];
+  onChange: (photos: PickedPhoto[]) => void;
+  maxPhotos?: number;
+  /** Shows a "Required" hint under the picker - the parent step's own
+   * isValid still controls whether the wizard can advance; this is
+   * display-only. */
+  required?: boolean;
+}) {
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const pick = async () => {
+    if (photos.length >= maxPhotos) return;
+    const result = await launchImageLibrary({
+      mediaType: 'photo',
+      selectionLimit: maxPhotos - photos.length,
+      quality: 0.9,
+    });
+    if (result.didCancel || result.errorCode || !result.assets) return;
+
+    setIsProcessing(true);
+    try {
+      const prepared: PickedPhoto[] = [];
+      for (const a of result.assets) {
+        if (!a.uri) continue;
+        try {
+          const compressed = await preparePostPhoto(a.uri, a.fileName ?? undefined, a.type ?? undefined, a.fileSize ?? undefined);
+          prepared.push({ uri: compressed.uri, fileName: compressed.fileName, type: compressed.type });
+        } catch (err) {
+          if (err instanceof InvalidPhotoTypeError) {
+            Alert.alert('Unsupported photo', err.message);
+          } else {
+            Alert.alert('Could not process photo', 'Please try a different image.');
+          }
+        }
+      }
+      onChange([...photos, ...prepared].slice(0, maxPhotos));
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  const remove = (uri: string) => onChange(photos.filter((p) => p.uri !== uri));
+
+  return (
+    <View>
+      {photos.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoScroll}>
+          {photos.map((p) => (
+            <View key={p.uri} style={styles.photoThumbWrap}>
+              <Image source={{ uri: p.uri }} style={styles.photoThumb} />
+              <TouchableOpacity style={styles.photoRemoveBtn} onPress={() => remove(p.uri)} hitSlop={8}>
+                <IconClose />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+      {photos.length < maxPhotos && (
+        <TouchableOpacity style={styles.addPhotosBox} onPress={pick} activeOpacity={0.8} disabled={isProcessing}>
+          {isProcessing ? (
+            <ActivityIndicator color={EMERALD} />
+          ) : (
+            <>
+              <IconPlusCircle />
+              <Text style={styles.addPhotosText}>Add Photos{required ? ' (Required)' : ''}</Text>
+              <Text style={styles.addPhotosSub}>Up to {maxPhotos} images - max {formatBytes(MAX_PHOTO_BYTES)} each, compressed automatically</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  noteBox: {
+    backgroundColor: CANVAS,
+    borderRadius: 14,
+    minHeight: 140,
+    padding: 14,
+    ...SHADOW.level1,
+  },
+  noteInput: { fontSize: 14.5, color: INK, minHeight: 110, textAlignVertical: 'top' },
+  noteCounter: { textAlign: 'right', color: SUBTLE, fontSize: 12, marginTop: 6 },
+
+  ratingRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  ratingCell: { alignItems: 'center', flex: 1 },
+  ratingCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    ...SHADOW.level1,
+  },
+  ratingCircleActive: { backgroundColor: EMERALD, ...SHADOW.level2 },
+  ratingNum: { fontSize: 15, fontWeight: '700', color: INK },
+  ratingNumActive: { color: '#FFFFFF' },
+  ratingLabel: { fontSize: 10.5, color: SUBTLE, marginTop: 6, textAlign: 'center' },
+  ratingLabelSpacer: { height: 14 },
+
+  photoScroll: { marginBottom: 12 },
+  photoThumbWrap: { marginRight: 10 },
+  photoThumb: { width: 72, height: 72, borderRadius: 12, backgroundColor: CANVAS },
+  photoRemoveBtn: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: INK,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addPhotosBox: {
+    borderWidth: 1.5,
+    borderColor: EMERALD,
+    borderStyle: 'dashed',
+    borderRadius: 14,
+    paddingVertical: 22,
+    alignItems: 'center',
+    backgroundColor: EMERALD_SOFT,
+  },
+  addPhotosText: { color: EMERALD, fontWeight: '700', fontSize: 14, marginTop: 6 },
+  addPhotosSub: { color: SUBTLE, fontSize: 11.5, marginTop: 2 },
+});
