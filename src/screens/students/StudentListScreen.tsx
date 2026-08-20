@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import { Calendar, Check, ChevronLeft, ChevronRight, Funnel, Layers, Plus, Search, TriangleAlert, X } from 'lucide-react-native';
+import { Check, ChevronRight, Funnel, Plus, Search, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchStudents, StudentSummary, ChildStatus } from '../../services/adminService';
@@ -19,10 +19,14 @@ import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import UserAvatar from '../../components/UserAvatar';
 import { ChildActionModal, ChildProfileSheet } from '../../components/ChildProfileSheet';
 
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import ScreenHeader from '../../components/ScreenHeader';
 import { isOrphanSchoolUser } from '../../utils/orphanSchool';
+import { Box } from '../../components/ui/box';
+import { HStack } from '../../components/ui/hstack';
+import { VStack } from '../../components/ui/vstack';
+import { Text as GSText } from '../../components/ui/text';
 const EMERALD = COLORS.emerald;
 const EMERALD_SOFT = COLORS.emeraldSoft;
 const INK = COLORS.ink;
@@ -40,6 +44,16 @@ const STATUS_COLORS: Record<ChildStatus, { dot: string; chipBg: string; chipText
   inactive: { dot: DANGER, chipBg: DANGER_SOFT, chipText: DANGER, label: 'Inactive' },
 };
 
+// Deterministic color per class/section name - same section always gets
+// the same color across the list (and across screens, teacher list uses
+// the same palette+hash), rather than a random assignment on every render.
+const SECTION_PALETTE = ['#0A84FF', '#8B5CF6', '#FF6B81', '#0EA5E9', '#D4A64A', '#FF9F0A'];
+function colorForKey(key: string): string {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  return SECTION_PALETTE[hash % SECTION_PALETTE.length];
+}
+
 function formatJoined(dateStr?: string | null): string | null {
   if (!dateStr) return null;
   const d = new Date(dateStr);
@@ -51,9 +65,6 @@ function formatJoined(dateStr?: string | null): string | null {
 function IconPlus({ color }: { color: string }) {
   return <Plus size={19} color={color} strokeWidth={2.4} />;
 }
-function IconChevronLeft({ color }: { color: string }) {
-  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
-}
 function IconChevronRight({ color }: { color: string }) {
   return <ChevronRight size={20} color={color} strokeWidth={2.2} />;
 }
@@ -62,15 +73,6 @@ function IconSearch({ color }: { color: string }) {
 }
 function IconFilter({ color }: { color: string }) {
   return <Funnel size={18} color={color} strokeWidth={2} />;
-}
-function IconCalendar({ color }: { color: string }) {
-  return <Calendar size={13} color={color} strokeWidth={2} />;
-}
-function IconLayers({ color }: { color: string }) {
-  return <Layers size={13} color={color} strokeWidth={2} />;
-}
-function IconAlertTriangle({ color }: { color: string }) {
-  return <TriangleAlert size={13} color={color} strokeWidth={2} />;
 }
 function IconClose({ color }: { color: string }) {
   return <X size={18} color={color} strokeWidth={2.2} />;
@@ -151,7 +153,6 @@ function FilterSheet({
  * adapts based on the logged-in admin's school.
  */
 export default function StudentListScreen() {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const route = useRoute();
   const { token, user } = useAuth();
@@ -232,32 +233,26 @@ export default function StudentListScreen() {
     });
   };
 
-  return (
-    <View style={styles.flex}>
-      <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={10}>
-          <IconChevronLeft color={EMERALD} />
-          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>{title}</Text>
-        <View style={styles.headerRightRow}>
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => (navigation as any).navigate('Admission')}
-            hitSlop={8}
-          >
-            <IconPlus color="#FFFFFF" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterBtn, isFilterActive && styles.filterBtnActive]}
-            onPress={() => setFilterSheetOpen(true)}
-            hitSlop={8}
-          >
-            <IconFilter color={isFilterActive ? '#FFFFFF' : EMERALD} />
-          </TouchableOpacity>
-        </View>
-      </View>
+  const listHeader = (
+    <>
+      <ScreenHeader
+        title={title}
+        caption={t('student_list.search_caption', 'Search and manage every {title}.').replace('{title}', title.toLowerCase())}
+        rightAction={
+          <>
+            <TouchableOpacity style={styles.addBtn} onPress={() => (navigation as any).navigate('Admission')} hitSlop={8}>
+              <IconPlus color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterBtn, isFilterActive && styles.filterBtnActive]}
+              onPress={() => setFilterSheetOpen(true)}
+              hitSlop={8}
+            >
+              <IconFilter color={isFilterActive ? '#FFFFFF' : EMERALD} />
+            </TouchableOpacity>
+          </>
+        }
+      />
 
       <View style={styles.searchWrap}>
         <IconSearch color={SUBTLE} />
@@ -270,88 +265,121 @@ export default function StudentListScreen() {
           autoCorrect={false}
         />
       </View>
+    </>
+  );
+
+  return (
+    <View style={styles.flex}>
+      <GlassBackground variant="canvas" />
 
       {isLoading ? (
-        <View style={styles.listContent}>
-          {[0, 1, 2, 3, 4].map((i) => (
-            <View key={i} style={styles.card}>
-              <SkeletonCircle size={44} style={{ marginRight: 12 }} />
-              <View style={styles.cardBody}>
-                <Skeleton width="55%" height={14} style={{ marginBottom: 6 }} />
-                <Skeleton width="75%" height={11} />
-              </View>
-            </View>
-          ))}
+        <View style={styles.flex1}>
+          {listHeader}
+          <View style={styles.listContent}>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <Box key={i} className="flex-row items-center bg-background rounded-xl border border-border p-3 mb-2">
+                <SkeletonCircle size={44} style={{ marginRight: 12 }} />
+                <View style={styles.cardBody}>
+                  <Skeleton width="55%" height={14} style={{ marginBottom: 6 }} />
+                  <Skeleton width="75%" height={11} />
+                </View>
+              </Box>
+            ))}
+          </View>
         </View>
       ) : error ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={load} style={styles.retryButton}>
-            <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
-          </TouchableOpacity>
+        <View style={styles.flex1}>
+          {listHeader}
+          <View style={styles.center}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity onPress={load} style={styles.retryButton}>
+              <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       ) : filtered.length === 0 ? (
-        <View style={styles.center}>
-          <Text style={styles.emptyText}>
-            {students.length === 0
-              ? t('student_list.empty_none', 'No {title} found.').replace('{title}', title.toLowerCase())
-              : t('student_list.empty_no_matches', 'No matches for your search.')}
-          </Text>
+        <View style={styles.flex1}>
+          {listHeader}
+          <View style={styles.center}>
+            <Text style={styles.emptyText}>
+              {students.length === 0
+                ? t('student_list.empty_none', 'No {title} found.').replace('{title}', title.toLowerCase())
+                : t('student_list.empty_no_matches', 'No matches for your search.')}
+            </Text>
+          </View>
         </View>
       ) : (
         <FlatList
           data={filtered}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.listContent}
+          ListHeaderComponent={listHeader}
           refreshControl={
             <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={EMERALD} />
           }
           renderItem={({ item }) => {
             const status = item.status ?? 'active';
             const joined = formatJoined(item.joined_date);
+            // Was three separate colored chips - collapsed into the single
+            // plain subtitle line the reference card uses, with the
+            // unplaced-section warning as the only part that keeps its own
+            // color (everything else reads as one calm meta line).
+            const sectionText = item.section_name
+              ? [item.class_name, item.section_name].filter(Boolean).join(' - ') +
+                (item.room_number ? ` · ${t('student_list.room', 'Room')} ${item.room_number}` : '')
+              : null;
+            // Orphan schools have no class/section model at all - see
+            // isOrphanSchoolUser's doc comment - so the warning would fire
+            // for every single child there and mean nothing.
+            const showUnplacedWarning = !sectionText && !isOrphanSchool;
+            const sectionKey = item.section_name ?? item.class_name ?? null;
+            const accentColor = sectionKey ? colorForKey(sectionKey) : AMBER;
             return (
-              <TouchableOpacity
-                style={styles.card}
-                activeOpacity={0.75}
-                onPress={() => setActionChild(item)}
-              >
-                <UserAvatar
-                  name={item.name}
-                  photo={item.photo}
-                  size={44}
-                  ringColor={HAIRLINE}
-                  dotColor={STATUS_COLORS[status].dot}
-                />
-                <View style={styles.cardBody}>
-                  <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-                  <Text style={styles.meta} numberOfLines={1}>{item.email}</Text>
-                  <View style={styles.chipRow}>
-                    {item.section_name ? (
-                      <View style={styles.sectionChip}>
-                        <IconLayers color={EMERALD} />
-                        <Text style={styles.sectionChipText} numberOfLines={1}>
-                          {[item.class_name, item.section_name].filter(Boolean).join(' - ')}
-                          {item.room_number ? ` · ${t('student_list.room', 'Room')} ${item.room_number}` : ''}
-                        </Text>
-                      </View>
-                    ) : isOrphanSchool ? null : (
-                      // Orphan schools have no class/section model at all - see
-                      // isOrphanSchoolUser's doc comment - so this warning would
-                      // fire for every single child there and mean nothing.
-                      <View style={styles.warnChip}>
-                        <IconAlertTriangle color={AMBER} />
-                        <Text style={styles.warnChipText}>{t('student_list.not_enrolled', 'Not placed in a section')}</Text>
-                      </View>
-                    )}
-                    {joined ? (
-                      <View style={styles.joinedChip}>
-                        <IconCalendar color={EMERALD} />
-                        <Text style={styles.joinedChipText}>{t('student_list.joined', 'Joined {date}').replace('{date}', joined)}</Text>
-                      </View>
+              <TouchableOpacity activeOpacity={0.75} onPress={() => setActionChild(item)}>
+                <HStack
+                  space="md"
+                  className="items-center rounded-xl border p-3 mb-2"
+                  style={{
+                    backgroundColor: `${accentColor}14`,
+                    borderColor: `${accentColor}33`,
+                    borderLeftWidth: 3,
+                    borderLeftColor: accentColor,
+                  }}
+                >
+                  <UserAvatar
+                    name={item.name}
+                    photo={item.photo}
+                    size={40}
+                    ringColor={HAIRLINE}
+                    dotColor={STATUS_COLORS[status].dot}
+                  />
+                  <VStack className="flex-1">
+                    <GSText className="text-foreground text-[15px] font-bold" numberOfLines={1}>
+                      {item.name}
+                    </GSText>
+                    <GSText className="text-muted-foreground text-xs mt-0.5" numberOfLines={1}>
+                      {item.email}
+                    </GSText>
+                    {sectionText || showUnplacedWarning || joined ? (
+                      <GSText className="text-xs mt-1" numberOfLines={1}>
+                        {sectionText ? (
+                          <GSText className="font-semibold" style={{ color: accentColor }}>{sectionText}</GSText>
+                        ) : showUnplacedWarning ? (
+                          <GSText className="text-amber-600 font-semibold">
+                            {t('student_list.not_enrolled', 'Not placed in a section')}
+                          </GSText>
+                        ) : null}
+                        {joined ? (
+                          <GSText className="text-muted-foreground">
+                            {(sectionText || showUnplacedWarning) ? ' · ' : ''}
+                            {t('student_list.joined', 'Joined {date}').replace('{date}', joined)}
+                          </GSText>
+                        ) : null}
+                      </GSText>
                     ) : null}
-                  </View>
-                </View>
-                <IconChevronRight color="#C4C9CF" />
+                  </VStack>
+                  <IconChevronRight color="#C4C9CF" />
+                </HStack>
               </TouchableOpacity>
             );
           }}
@@ -386,19 +414,6 @@ export default function StudentListScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: 'transparent' },
   flex1: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  backBtn: { flexDirection: 'row', alignItems: 'center', minWidth: 64 },
-  backText: { color: EMERALD, fontSize: 15, fontWeight: '600', marginLeft: 2 },
-  title: { fontSize: 18, fontWeight: '700', color: INK },
-  headerRightRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   addBtn: {
     width: 38,
     height: 38,
@@ -422,8 +437,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.pill,
-    marginHorizontal: 16,
-    marginTop: 14,
+    marginHorizontal: 20,
+    marginTop: 16,
     paddingHorizontal: 16,
     height: 46,
     gap: 10,
@@ -436,57 +451,9 @@ const styles = StyleSheet.create({
   retryButton: { backgroundColor: '#F2F2F7', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
   retryText: { color: INK, fontWeight: '600' },
   emptyText: { color: SUBTLE, fontSize: 15, textAlign: 'center' },
-  listContent: { padding: 16, paddingBottom: 40 },
+  listContent: { paddingHorizontal: 12, paddingBottom: 40 },
 
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 16,
-    marginBottom: 10,
-  ...SHADOW.level2,
-  },
   cardBody: { flex: 1, marginLeft: 12 },
-  name: { fontSize: 15.5, fontWeight: '700', color: INK },
-  meta: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 7 },
-  joinedChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: EMERALD_SOFT,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    gap: 5,
-  },
-  joinedChipText: { fontSize: 11.5, fontWeight: '600', color: EMERALD },
-  sectionChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: EMERALD_SOFT,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    gap: 5,
-    maxWidth: '100%',
-  },
-  sectionChipText: { fontSize: 11.5, fontWeight: '600', color: EMERALD, flexShrink: 1 },
-  warnChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: AMBER_SOFT,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    gap: 5,
-  },
-  warnChipText: { fontSize: 11.5, fontWeight: '600', color: AMBER },
 
   // --- Sheets (filter + profile) ---
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.4)', justifyContent: 'flex-end' },

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -18,20 +18,18 @@ import KeyboardAwareModal from '../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import LinearGradient from 'react-native-linear-gradient';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { Camera, ChevronLeft, IdCard, Images, ScanFace, School, X } from 'lucide-react-native';
+import { BookOpen, Camera, Check, ChevronLeft, GraduationCap, Heart, IdCard, Images, ScanFace, School, Users, X } from 'lucide-react-native';
 import { useLocale } from '../context/LocaleContext';
 import { BRAND, COLORS, RADIUS, SHADOW } from '../theme/glass';
 import GlassBackground from '../components/glass/GlassBackground';
-import BentoOptionGrid, { BentoOption } from '../components/glass/BentoOptionGrid';
-import { useAcademicGlassTheme } from './teachers/academicGlassTheme';
 import { preparePostPhoto, InvalidPhotoTypeError } from '../utils/imagePrep';
+import { ensureCameraPermission } from '../utils/cameraPermission';
 import { submitSchoolRegistration, SchoolRegistrationInput } from '../services/schoolRegistrationService';
 import {
   WizardGradientButton as GradientButton,
-  WizardStepHeader,
   WizardFieldLabel as FieldLabel,
-  CheckCircleIcon,
   form,
 } from '../components/wizard/WizardKit';
 
@@ -41,15 +39,35 @@ const BORDER = COLORS.border;
 
 type InstitutionType = 'mahad' | 'madrasa' | 'markaz' | 'regular_school' | 'orphanage';
 
-interface InstitutionOption extends BentoOption {
+interface InstitutionOption {
+  id: number;
   type: InstitutionType;
+  name: string;
 }
+
+// Gradient promo-card look for the institution-type picker: each type gets
+// its own two-stop gradient + icon, rather than a flat bento tile - the
+// picker also doubles as the first visual impression of the app.
+const TYPE_GRADIENTS: Record<InstitutionType, [string, string]> = {
+  mahad: ['#2F6FED', '#5B8DFF'],
+  madrasa: ['#63A9FF', '#9AD0FF'],
+  markaz: ['#FB923C', '#F97316'],
+  regular_school: ['#FF7A8A', '#F13C56'],
+  orphanage: ['#34D399', '#10B981'],
+};
+
+const TYPE_ICONS: Record<InstitutionType, typeof School> = {
+  mahad: BookOpen,
+  madrasa: GraduationCap,
+  markaz: Users,
+  regular_school: School,
+  orphanage: Heart,
+};
 
 const INSTITUTION_OPTIONS: InstitutionOption[] = [
   { id: 1, type: 'mahad', name: 'Mahad' },
   { id: 2, type: 'madrasa', name: 'Madrasa' },
   { id: 3, type: 'markaz', name: 'Markaz' },
-  { id: 4, type: 'regular_school', name: 'Regular School' },
   { id: 5, type: 'orphanage', name: 'Orphan School' },
 ];
 
@@ -68,11 +86,11 @@ const STANDARD_ACADEMIC_FEATURES = [
 ];
 const INSTITUTION_META: Record<InstitutionType, { tagline: string; features: string[] }> = {
   mahad: {
-    tagline: 'Islamic seminary or full-time program',
+    tagline: 'Seminary or full-time program',
     features: STANDARD_ACADEMIC_FEATURES,
   },
   madrasa: {
-    tagline: 'Part-time or weekend Islamic school',
+    tagline: 'Part-time or weekend school',
     features: STANDARD_ACADEMIC_FEATURES,
   },
   markaz: {
@@ -93,11 +111,11 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const STEP_LABELS = ['Type', 'School', 'Admin', 'Verify', 'Review'];
 
 const PASSWORD_RULES: { key: string; label: string; test: (pw: string) => boolean }[] = [
-  { key: 'length', label: 'At least 8 characters', test: (pw) => pw.length >= 8 },
-  { key: 'upper', label: 'One uppercase letter (A-Z)', test: (pw) => /[A-Z]/.test(pw) },
-  { key: 'lower', label: 'One lowercase letter (a-z)', test: (pw) => /[a-z]/.test(pw) },
-  { key: 'number', label: 'One number (0-9)', test: (pw) => /[0-9]/.test(pw) },
-  { key: 'special', label: 'One special character (!@#$...)', test: (pw) => /[^A-Za-z0-9]/.test(pw) },
+  { key: 'length', label: '8+ characters', test: (pw) => pw.length >= 8 },
+  { key: 'upper', label: 'an uppercase letter', test: (pw) => /[A-Z]/.test(pw) },
+  { key: 'lower', label: 'a lowercase letter', test: (pw) => /[a-z]/.test(pw) },
+  { key: 'number', label: 'a number', test: (pw) => /[0-9]/.test(pw) },
+  { key: 'special', label: 'a special character', test: (pw) => /[^A-Za-z0-9]/.test(pw) },
 ];
 const isPasswordStrong = (pw: string) => PASSWORD_RULES.every((rule) => rule.test(pw));
 
@@ -111,9 +129,6 @@ interface PickedPhoto {
 
 function BackIcon() {
   return <ChevronLeft size={22} color={INK} strokeWidth={2.1} />;
-}
-function SchoolTypeIcon({ color }: { color: string }) {
-  return <School size={20} color={color} strokeWidth={2} />;
 }
 function IdCardIcon({ color = BRAND.emerald, size = 34 }: { color?: string; size?: number }) {
   return <IdCard size={size} color={color} strokeWidth={1.8} />;
@@ -160,69 +175,197 @@ function RuleStatusIcon({ met, size = 14 }: { met: boolean; size?: number }) {
   );
 }
 
+// "a, b and c" instead of a comma-only list - reads as one sentence.
+function joinMissing(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? '';
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
+// One line instead of a 5-row checklist: states only what's still missing
+// ("kulang"), so it stays short and shrinks as the password improves.
 function PasswordStrengthChecklist({ password }: { password: string }) {
   if (!password) return null;
+  const missing = PASSWORD_RULES.filter((rule) => !rule.test(password)).map((rule) => rule.label);
+
+  if (missing.length === 0) {
+    return (
+      <View style={strength.row}>
+        <RuleStatusIcon met />
+        <Text style={strength.metText}>Meets all password requirements</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={strength.list}>
-      {PASSWORD_RULES.map((rule) => {
-        const met = rule.test(password);
-        return (
-          <View key={rule.key} style={strength.row}>
-            <RuleStatusIcon met={met} />
-            <Text style={[strength.ruleText, met && strength.ruleTextMet]}>{rule.label}</Text>
-          </View>
-        );
-      })}
+    <View style={strength.row}>
+      <RuleStatusIcon met={false} />
+      <Text style={strength.missingText}>Still needs {joinMissing(missing)}.</Text>
     </View>
   );
 }
 
 /**
- * Feature-reveal card shown under the institution-type grid - the whole
- * point is to answer "what do I actually get" right where the choice is
- * made, instead of leaving it to be discovered later. Re-plays its
- * fade/slide-in every time `type` changes (not a one-shot animation) so
- * switching between tiles keeps feeling responsive rather than static
- * after the first pick.
+ * Feature details for the selected institution type, shown as a bottom
+ * sheet (opened right after a card is tapped) instead of an inline card
+ * under the grid - answers "what do I actually get" without pushing the
+ * rest of the form down / requiring a scroll to see it.
+ *
+ * Animates the dim layer and the sheet separately (Modal's own "slide"
+ * animation was used before, but that slides the WHOLE modal content -
+ * dim layer included - up from off-screen together with the sheet, so the
+ * backdrop only reaches full-screen once the slide finishes, reading as a
+ * delay before anything darkens). The dim now fades in place instantly
+ * while just the sheet card slides up over it.
  */
-function InstitutionFeaturePreview({ type }: { type: InstitutionType | null }) {
+function InstitutionFeatureSheet({
+  visible,
+  type,
+  onClose,
+  insetsBottom,
+}: {
+  visible: boolean;
+  type: InstitutionType | null;
+  onClose: () => void;
+  insetsBottom: number;
+}) {
   const { t } = useLocale();
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(10)).current;
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(320)).current;
 
   useEffect(() => {
-    if (!type) return;
-    opacity.setValue(0);
-    translateY.setValue(10);
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 240, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 240, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-    ]).start();
-  }, [type, opacity, translateY]);
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(backdropOpacity, { toValue: 1, duration: 160, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: 0, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      ]).start();
+    } else {
+      backdropOpacity.setValue(0);
+      translateY.setValue(320);
+    }
+  }, [visible, backdropOpacity, translateY]);
 
-  if (!type) {
-    return (
-      <View style={preview.hintCard}>
-        <Text style={preview.hintText}>
-          {t('school_registration.type_hint', 'Pick an institution type above to see what it comes with.')}
-        </Text>
-      </View>
-    );
-  }
-
+  if (!type) return null;
   const meta = INSTITUTION_META[type];
 
   return (
-    <Animated.View style={[preview.card, { opacity, transform: [{ translateY }] }]}>
-      <Text style={preview.tagline}>{t(`school_registration.tagline_${type}`, meta.tagline)}</Text>
-      <Text style={preview.title}>{t('school_registration.features_title', "What you'll get")}</Text>
-      {meta.features.map((feature, i) => (
-        <View key={feature} style={preview.row}>
-          <FeatureCheckIcon />
-          <Text style={preview.rowText}>{t(`school_registration.feature_${type}_${i}`, feature)}</Text>
-        </View>
-      ))}
+    <KeyboardAwareModal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <View style={[sheet.backdrop, { backgroundColor: 'transparent' }]}>
+        <Animated.View
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(17,20,23,0.4)', opacity: backdropOpacity }]}
+        />
+        <TouchableOpacity style={sheet.backdropTouch} activeOpacity={1} onPress={onClose} />
+        <Animated.View style={[sheet.sheet, { paddingBottom: Math.max(insetsBottom, 20), transform: [{ translateY }] }]}>
+          <View style={sheet.handle} />
+          <View style={sheet.headerRow}>
+            <Text style={[sheet.title, { flex: 1, marginRight: 12 }]} numberOfLines={2}>
+              {t(`school_registration.tagline_${type}`, meta.tagline)}
+            </Text>
+            <TouchableOpacity onPress={onClose} hitSlop={12} style={sheet.closeBtn}>
+              <CloseIcon />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={preview.title}>{t('school_registration.features_title', "What you'll get")}</Text>
+          {meta.features.map((feature, i) => (
+            <View key={feature} style={preview.row}>
+              <FeatureCheckIcon />
+              <Text style={preview.rowText}>{t(`school_registration.feature_${type}_${i}`, feature)}</Text>
+            </View>
+          ))}
+        </Animated.View>
+      </View>
+    </KeyboardAwareModal>
+  );
+}
+
+/**
+ * One gradient promo card in the institution-type grid - pill badge with
+ * the type name, the tagline as the bold headline, and the type's icon
+ * bottom-right in a soft circle. Selection reads through a white ring +
+ * check badge since the card is already a flat saturated color, so a
+ * background-tint change (the usual selected-state trick) wouldn't show.
+ *
+ * The shadow lives on the outer (non-clipping) wrapper, never on the
+ * LinearGradient itself - on Android, a view with overflow:hidden + rounded
+ * corners + elevation but no border can fail to render its children
+ * entirely, which is why every unselected card used to render blank.
+ * Press feedback is a spring scale on the wrapper rather than just opacity,
+ * so tapping a card actually reads as a tap.
+ */
+function SchoolTypeCard({
+  option,
+  selected,
+  onPress,
+}: {
+  option: InstitutionOption;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const { t } = useLocale();
+  const Icon = TYPE_ICONS[option.type];
+  const tagline = INSTITUTION_META[option.type].tagline;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const pressIn = () => {
+    Animated.spring(scale, { toValue: 0.95, useNativeDriver: true, speed: 40, bounciness: 6 }).start();
+  };
+  const pressOut = () => {
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30, bounciness: 8 }).start();
+  };
+
+  return (
+    <Animated.View style={[typeCard.wrap, { transform: [{ scale }] }]}>
+      <TouchableOpacity activeOpacity={0.92} onPress={onPress} onPressIn={pressIn} onPressOut={pressOut}>
+        <LinearGradient
+          colors={TYPE_GRADIENTS[option.type]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[typeCard.card, selected && typeCard.cardSelected]}
+        >
+          <View style={typeCard.badge}>
+            <Text style={typeCard.badgeText} numberOfLines={1}>
+              {option.name}
+            </Text>
+          </View>
+
+          <Text style={typeCard.tagline} numberOfLines={3}>
+            {t(`school_registration.tagline_${option.type}`, tagline)}
+          </Text>
+
+          <View style={typeCard.iconWrap}>
+            <Icon size={24} color="#FFFFFF" strokeWidth={1.8} />
+          </View>
+
+          {selected ? (
+            <View style={typeCard.checkBadge}>
+              <Check size={14} color={TYPE_GRADIENTS[option.type][1]} strokeWidth={3} />
+            </View>
+          ) : null}
+        </LinearGradient>
+      </TouchableOpacity>
     </Animated.View>
+  );
+}
+
+function SchoolTypeGrid({
+  options,
+  value,
+  onChange,
+}: {
+  options: InstitutionOption[];
+  value: number | null;
+  onChange: (id: number) => void;
+}) {
+  const { t } = useLocale();
+  return (
+    <View>
+      <Text style={typeCard.label}>{t('school_registration.institution_type', 'Institution Type') + ' *'}</Text>
+      <View style={typeCard.grid}>
+        {options.map((opt) => (
+          <SchoolTypeCard key={opt.id} option={opt} selected={opt.id === value} onPress={() => onChange(opt.id)} />
+        ))}
+      </View>
+    </View>
   );
 }
 
@@ -232,13 +375,22 @@ export default function SchoolRegistrationScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { t } = useLocale();
-  const theme = useAcademicGlassTheme('emerald');
 
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [submitted, setSubmitted] = useState(false);
+  // Spring-in for the success icon, App Store/Wallet-style, rather than
+  // just appearing statically.
+  const successIconScale = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (submitted) {
+      successIconScale.setValue(0);
+      Animated.spring(successIconScale, { toValue: 1, useNativeDriver: true, friction: 5, tension: 60 }).start();
+    }
+  }, [submitted, successIconScale]);
 
   // Step 1 - Institution type
   const [institutionTypeId, setInstitutionTypeId] = useState<number | null>(null);
+  const [featureSheetVisible, setFeatureSheetVisible] = useState(false);
 
   // Step 2 - School info
   const [schoolName, setSchoolName] = useState('');
@@ -283,6 +435,25 @@ export default function SchoolRegistrationScreen() {
   };
 
   const capturePhoto = async (target: 'id' | 'selfie', source: 'camera' | 'library') => {
+    // Must run BEFORE launchCamera: the picker only checks this permission,
+    // it never prompts for it (see ensureCameraPermission's note), so without
+    // this the camera silently no-ops on Android.
+    if (source === 'camera') {
+      const permission = await ensureCameraPermission();
+      if (permission !== 'granted') {
+        Alert.alert(
+          t('school_registration.camera_denied_title', 'Camera access needed'),
+          permission === 'blocked'
+            ? t(
+                'school_registration.camera_blocked_body',
+                'Camera access is turned off for MuslimEdu. Enable it in your device Settings > Apps > MuslimEdu > Permissions to continue.',
+              )
+            : t('school_registration.camera_denied_body', 'We need your camera to take this photo.'),
+        );
+        return;
+      }
+    }
+
     const setPicking = target === 'id' ? setPickingId : setPickingSelfie;
     setPicking(true);
     try {
@@ -290,8 +461,20 @@ export default function SchoolRegistrationScreen() {
         source === 'camera'
           ? await launchCamera({ mediaType: 'photo', quality: 0.9, cameraType: target === 'selfie' ? 'front' : 'back', saveToPhotos: false })
           : await launchImageLibrary({ mediaType: 'photo', selectionLimit: 1, quality: 0.9 });
+
+      if (result.didCancel) return;
+      // Surfacing this instead of returning silently - swallowing errorCode is
+      // what made a blocked camera look like a dead button.
+      if (result.errorCode) {
+        Alert.alert(
+          t('school_registration.camera_error_title', "Couldn't open the camera"),
+          result.errorMessage ?? t('common.try_again_full', 'Please try again.'),
+        );
+        return;
+      }
+
       const asset = result.assets?.[0];
-      if (result.didCancel || result.errorCode || !asset?.uri) return;
+      if (!asset?.uri) return;
 
       const prepared = await preparePostPhoto(asset.uri, asset.fileName, asset.type, asset.fileSize);
       const photo: PickedPhoto = { uri: prepared.uri, fileName: prepared.fileName, type: prepared.type };
@@ -345,19 +528,31 @@ export default function SchoolRegistrationScreen() {
     return (
       <View style={styles.flex}>
         <GlassBackground variant="canvas" />
-        <View style={[styles.successWrap, { paddingTop: insets.top + 40 }]}>
-          <CheckCircleIcon size={80} />
-          <Text style={styles.successTitle}>{t('school_registration.pending_title', 'Application submitted')}</Text>
-          <Text style={styles.successBody}>
-            {t(
-              'school_registration.pending_body',
-              "Your school and admin account are pending review. You'll be able to sign in once a superadmin approves your application - this is usually quick, but can take a little while.",
-            )}
-          </Text>
-          <View style={styles.pendingBadge}>
-            <Text style={styles.pendingBadgeText}>{t('school_registration.pending_badge', 'Status: Pending Approval')}</Text>
+        <View style={[success.container, { paddingTop: insets.top }]}>
+          <View style={success.content}>
+            <Animated.View style={[success.iconWrap, { transform: [{ scale: successIconScale }] }]}>
+              <Check size={44} color="#FFFFFF" strokeWidth={3} />
+            </Animated.View>
+
+            <Text style={success.title}>{t('school_registration.pending_title', 'Application Submitted')}</Text>
+            <Text style={success.body}>
+              {t(
+                'school_registration.pending_body',
+                "Your school and admin account are pending review. You'll be able to sign in once a superadmin approves your application - this is usually quick, but can take a little while.",
+              )}
+            </Text>
+
+            <View style={success.statusChip}>
+              <View style={success.statusDot} />
+              <Text style={success.statusText}>{t('school_registration.pending_badge', 'Pending Approval')}</Text>
+            </View>
           </View>
-          <GradientButton label={t('school_registration.back_to_login', 'Back to Login')} onPress={() => navigation.goBack()} />
+
+          <View style={[success.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+            <TouchableOpacity style={success.button} activeOpacity={0.85} onPress={() => navigation.goBack()}>
+              <Text style={success.buttonText}>{t('school_registration.back_to_login', 'Back to Login')}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -370,36 +565,42 @@ export default function SchoolRegistrationScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => (step === 1 ? navigation.goBack() : goBackStep())} hitSlop={10}>
           <BackIcon />
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>{t('school_registration.title', 'Register Your School')}</Text>
-          <Text style={styles.headerSubtitle}>{t('school_registration.subtitle', 'A few steps to get your institution set up')}</Text>
-        </View>
       </View>
 
-      <WizardStepHeader step={step} labels={STEP_LABELS} />
+      <View style={styles.titleBlock}>
+        <Text style={styles.headerTitle}>{t('school_registration.title', 'Register Your School')}</Text>
+        <Text style={styles.stepCaption}>
+          {t('school_registration.step_caption', 'Step {current} of {total}: {label}')
+            .replace('{current}', String(step))
+            .replace('{total}', String(STEP_LABELS.length))
+            .replace('{label}', STEP_LABELS[step - 1])}
+        </Text>
+      </View>
+
+      <View style={styles.progressTrack}>
+        {STEP_LABELS.map((label, i) => (
+          <View key={label} style={[styles.progressSegment, i < step && styles.progressSegmentActive]} />
+        ))}
+      </View>
 
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={100}>
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
           {step === 1 && (
-            <>
-              <BentoOptionGrid
-                label={t('school_registration.institution_type', 'Institution Type') + ' *'}
-                options={INSTITUTION_OPTIONS}
-                value={institutionTypeId}
-                onChange={setInstitutionTypeId}
-                icon={(_, color) => <SchoolTypeIcon color={color} />}
-                theme={theme}
-              />
-
-              <InstitutionFeaturePreview type={institutionType} />
-            </>
+            <SchoolTypeGrid
+              options={INSTITUTION_OPTIONS}
+              value={institutionTypeId}
+              onChange={(id) => {
+                setInstitutionTypeId(id);
+                setFeatureSheetVisible(true);
+              }}
+            />
           )}
 
           {step === 2 && (
             <>
               <FieldLabel required>{t('school_registration.school_name', 'School Name')}</FieldLabel>
               <TextInput
-                style={form.input}
+                style={pill.input}
                 value={schoolName}
                 onChangeText={setSchoolName}
                 placeholder={t('school_registration.school_name_placeholder', "e.g. Al-Noor Islamic Academy")}
@@ -408,7 +609,7 @@ export default function SchoolRegistrationScreen() {
 
               <FieldLabel>{t('school_registration.school_address', 'Address')}</FieldLabel>
               <TextInput
-                style={[form.input, form.inputMultiline]}
+                style={[pill.input, pill.inputMultiline]}
                 value={schoolAddress}
                 onChangeText={setSchoolAddress}
                 placeholder={t('school_registration.school_address_placeholder', 'Street, city, country')}
@@ -418,7 +619,7 @@ export default function SchoolRegistrationScreen() {
 
               <FieldLabel>{t('school_registration.school_email', 'School Email')}</FieldLabel>
               <TextInput
-                style={form.input}
+                style={pill.input}
                 value={schoolEmail}
                 onChangeText={setSchoolEmail}
                 placeholder="school@example.com"
@@ -429,7 +630,7 @@ export default function SchoolRegistrationScreen() {
 
               <FieldLabel>{t('school_registration.school_phone', 'School Phone')}</FieldLabel>
               <TextInput
-                style={form.input}
+                style={pill.input}
                 value={schoolPhone}
                 onChangeText={setSchoolPhone}
                 placeholder="+63 912 345 6789"
@@ -443,7 +644,7 @@ export default function SchoolRegistrationScreen() {
             <>
               <FieldLabel required>{t('school_registration.admin_name', 'Your Full Name')}</FieldLabel>
               <TextInput
-                style={form.input}
+                style={pill.input}
                 value={adminName}
                 onChangeText={setAdminName}
                 placeholder={t('school_registration.admin_name_placeholder', 'As it appears on your ID')}
@@ -452,7 +653,7 @@ export default function SchoolRegistrationScreen() {
 
               <FieldLabel required>{t('school_registration.admin_email', 'Your Email')}</FieldLabel>
               <TextInput
-                style={form.input}
+                style={pill.input}
                 value={adminEmail}
                 onChangeText={setAdminEmail}
                 placeholder="you@example.com"
@@ -475,7 +676,7 @@ export default function SchoolRegistrationScreen() {
 
               <FieldLabel>{t('school_registration.admin_phone', 'Your Phone')}</FieldLabel>
               <TextInput
-                style={form.input}
+                style={pill.input}
                 value={adminPhone}
                 onChangeText={setAdminPhone}
                 placeholder="+63 912 345 6789"
@@ -485,7 +686,7 @@ export default function SchoolRegistrationScreen() {
 
               <FieldLabel required>{t('school_registration.password', 'Password')}</FieldLabel>
               <TextInput
-                style={form.input}
+                style={pill.input}
                 value={password}
                 onChangeText={setPassword}
                 placeholder={t('school_registration.password_placeholder', 'Create a strong password')}
@@ -496,7 +697,7 @@ export default function SchoolRegistrationScreen() {
 
               <FieldLabel required>{t('school_registration.confirm_password', 'Confirm Password')}</FieldLabel>
               <TextInput
-                style={form.input}
+                style={pill.input}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 placeholder={t('school_registration.confirm_password_placeholder', 'Re-enter your password')}
@@ -607,6 +808,13 @@ export default function SchoolRegistrationScreen() {
         </View>
       </KeyboardAvoidingView>
 
+      <InstitutionFeatureSheet
+        visible={featureSheetVisible}
+        type={institutionType}
+        onClose={() => setFeatureSheetVisible(false)}
+        insetsBottom={insets.bottom}
+      />
+
       <KeyboardAwareModal visible={idSourceSheetVisible} transparent animationType="slide" onRequestClose={() => setIdSourceSheetVisible(false)}>
         <View style={sheet.backdrop}>
           <TouchableOpacity style={sheet.backdropTouch} activeOpacity={1} onPress={() => setIdSourceSheetVisible(false)} />
@@ -658,19 +866,87 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: COLORS.canvas },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 8 },
-  backBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
-  headerTitle: { fontSize: 19, fontWeight: '800', color: INK },
-  headerSubtitle: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 4 },
+  backBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+
+  titleBlock: { paddingHorizontal: 20, marginTop: 10 },
+  headerTitle: { fontSize: 26, fontWeight: '800', color: INK },
+  stepCaption: { fontSize: 14, color: SUBTLE, marginTop: 6 },
+
+  progressTrack: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginTop: 18, marginBottom: 4 },
+  progressSegment: { flex: 1, height: 4, borderRadius: 2, backgroundColor: BORDER },
+  progressSegmentActive: { backgroundColor: BRAND.emerald },
 
   body: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24 },
   footer: { paddingHorizontal: 20, paddingTop: 10, borderTopWidth: 1, borderTopColor: BORDER, backgroundColor: COLORS.surface },
+});
 
-  successWrap: { flex: 1, alignItems: 'center', paddingHorizontal: 32 },
-  successTitle: { fontSize: 21, fontWeight: '800', color: INK, marginTop: 20, textAlign: 'center' },
-  successBody: { fontSize: 14, color: SUBTLE, textAlign: 'center', marginTop: 12, lineHeight: 21 },
-  pendingBadge: { backgroundColor: COLORS.emeraldSoft, borderRadius: RADIUS.pill, paddingHorizontal: 16, paddingVertical: 9, marginTop: 20, marginBottom: 32 },
-  pendingBadgeText: { color: BRAND.emeraldDeep, fontWeight: '700', fontSize: 13 },
+// Success screen after submitting - centered content with a single CTA
+// pinned to the bottom safe area, filled (not gradient) icon and button,
+// a small dot-status chip instead of a solid-tint badge: closer to Apple's
+// confirmation-screen language (App Store/Wallet "Done" states) than the
+// gradient-capsule look the rest of this wizard uses.
+const success = StyleSheet.create({
+  container: { flex: 1, justifyContent: 'space-between' },
+  content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+  iconWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: BRAND.emerald,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: BRAND.emeraldDeep,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.28,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  title: { fontSize: 28, fontWeight: '800', color: INK, textAlign: 'center', marginTop: 26, letterSpacing: -0.3 },
+  body: { fontSize: 15.5, color: SUBTLE, textAlign: 'center', marginTop: 12, lineHeight: 23 },
+  statusChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginTop: 28,
+    ...SHADOW.level1,
+  },
+  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#F5A623' },
+  statusText: { color: INK, fontWeight: '700', fontSize: 13.5 },
+
+  footer: { paddingHorizontal: 24 },
+  button: {
+    backgroundColor: BRAND.emerald,
+    borderRadius: 16,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: BRAND.emeraldDeep,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+});
+
+// Soft, borderless pill fields instead of WizardKit's shared bordered
+// `form.input` (that style is reused by several other admin wizards - this
+// screen wants its own, rounder look without touching those).
+const pill = StyleSheet.create({
+  input: {
+    backgroundColor: '#EEF1EF',
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: INK,
+  },
+  inputMultiline: { minHeight: 76, textAlignVertical: 'top', paddingTop: 14 },
 });
 
 const verify = StyleSheet.create({
@@ -707,10 +983,9 @@ const verify = StyleSheet.create({
 });
 
 const strength = StyleSheet.create({
-  list: { marginTop: 10, gap: 6 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  ruleText: { fontSize: 12.5, color: SUBTLE },
-  ruleTextMet: { color: INK, fontWeight: '600' },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 10 },
+  missingText: { flex: 1, fontSize: 12.5, color: SUBTLE, lineHeight: 18 },
+  metText: { flex: 1, fontSize: 12.5, color: INK, fontWeight: '600', lineHeight: 18 },
 });
 
 const emailCheck = StyleSheet.create({
@@ -719,27 +994,61 @@ const emailCheck = StyleSheet.create({
 });
 
 const preview = StyleSheet.create({
-  hintCard: {
-    borderWidth: 1.5,
-    borderColor: BORDER,
-    borderStyle: 'dashed',
-    borderRadius: RADIUS.lg,
-    padding: 16,
-    marginTop: 16,
-  },
-  hintText: { fontSize: 13, color: SUBTLE, textAlign: 'center', lineHeight: 19 },
-  card: {
-    backgroundColor: COLORS.emeraldSoft,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(31,174,100,0.25)',
-    padding: 16,
-    marginTop: 16,
-  },
-  tagline: { fontSize: 12.5, fontWeight: '600', color: BRAND.emeraldDeep, marginBottom: 8 },
   title: { fontSize: 13.5, fontWeight: '800', color: INK, marginBottom: 10 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   rowText: { flex: 1, fontSize: 13, color: INK, lineHeight: 18 },
+});
+
+const typeCard = StyleSheet.create({
+  label: { fontSize: 12.5, fontWeight: '600', color: SUBTLE, marginBottom: 8 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
+  wrap: { width: '47%', borderRadius: RADIUS.lg },
+  card: {
+    minHeight: 190,
+    borderRadius: RADIUS.lg,
+    padding: 18,
+    justifyContent: 'space-between',
+    overflow: 'hidden',
+    // Always a 3px border, just transparent when unselected - selection
+    // then only ever changes borderColor, never borderWidth. On Android, a
+    // clipped (overflow:hidden + radius) view whose borderWidth changes
+    // between 0 and non-zero can drop its children on that re-render; a
+    // constant border width sidesteps the whole bug.
+    borderWidth: 3,
+    borderColor: 'transparent',
+  },
+  cardSelected: { borderColor: '#FFFFFF' },
+  badge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+  },
+  badgeText: { color: '#FFFFFF', fontSize: 12.5, fontWeight: '700' },
+  tagline: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', lineHeight: 16, marginTop: 14, marginRight: 44 },
+  iconWrap: {
+    position: 'absolute',
+    right: 16,
+    bottom: 16,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 
 const sheet = StyleSheet.create({

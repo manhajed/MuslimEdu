@@ -121,12 +121,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resetTwoFactorPrompt = useCallback(() => setRequiresTwoFactor(false), []);
 
   const logout = useCallback(async () => {
-    if (token) {
-      await logoutRequest(token);
-    }
-    await clearToken();
+    const revokedToken = token;
+
+    // Drop local session state FIRST. This is what RootNavigator switches
+    // on, so signing out must never be gated behind the network: the
+    // server revoke is a plain fetch with no timeout, and against a slow
+    // or unreachable host it can hang long enough that the app looks stuck
+    // on the dashboard. Awaiting it here used to swallow the whole logout.
     setToken(null);
     setUser(null);
+
+    try {
+      await clearToken();
+    } catch {
+      // Keychain wipe failed - the in-memory session is already gone, so
+      // the user is signed out for this run either way.
+    }
+
+    // Best-effort server-side revoke, deliberately not awaited.
+    if (revokedToken) {
+      logoutRequest(revokedToken).catch(() => {});
+    }
   }, [token]);
 
   const clearError = useCallback(() => setError(null), []);

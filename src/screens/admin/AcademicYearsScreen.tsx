@@ -8,6 +8,7 @@ import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import ScreenHeader from '../../components/ScreenHeader';
 import { Skeleton } from '../../components/Skeleton';
 import { EmptyState } from '../../components/EmptyState';
 import BottomNavBar from '../../components/BottomNavBar';
@@ -170,13 +171,12 @@ export default function AcademicYearsScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={[styles.header, { paddingTop: insets.top }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-            <IconChevronLeft color={theme.textPrimary} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('academic_years.title', 'Academic Years')}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        <ScreenHeader
+          title={t('academic_years.title', 'Academic Years')}
+          ink={theme.textPrimary}
+          subtle={theme.textSecondary}
+          backBg={theme.surface}
+        />
         <View style={styles.listContainer}>{[0, 1, 2].map(renderSkeletonCard)}</View>
         <BottomNavBar />
       </View>
@@ -186,24 +186,29 @@ export default function AcademicYearsScreen() {
   return (
     <View style={styles.container}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-          <IconChevronLeft color={theme.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Academic Years</Text>
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => (navigation as any).navigate('InstitutionProfile')}
-        >
-          <Text style={styles.profileButtonText}>{t('academic_years.profile', 'Profile')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => (navigation as any).navigate('AcademicYearForm')}
-        >
-          <Text style={styles.addButtonText}>+ {t('common.add', 'Add')}</Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title={t('academic_years.title', 'Academic Years')}
+        caption={t('academic_years.helper', 'Manage every academic year for this school. "Terms" opens each year\'s semesters/quarters.')}
+        ink={theme.textPrimary}
+        subtle={theme.textSecondary}
+        backBg={theme.surface}
+        rightAction={
+          <>
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={() => (navigation as any).navigate('InstitutionProfile')}
+            >
+              <Text style={styles.profileButtonText}>{t('academic_years.profile', 'Profile')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => (navigation as any).navigate('AcademicYearForm')}
+            >
+              <Text style={styles.addButtonText}>+ {t('common.add', 'Add')}</Text>
+            </TouchableOpacity>
+          </>
+        }
+      />
 
       {error ? (
         <View style={styles.errorBanner}>
@@ -213,10 +218,6 @@ export default function AcademicYearsScreen() {
           </TouchableOpacity>
         </View>
       ) : null}
-
-      <Text style={styles.helperText}>
-        {t('academic_years.helper', 'Manage every academic year for this school. "Terms" opens each year\'s semesters/quarters.')}
-      </Text>
 
       <FlatList
         style={{ flex: 1 }}

@@ -26,6 +26,7 @@ import {
 } from '../../services/studentNumberService';
 import { SHADOW, GLASS, COLORS, RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import ScreenHeader from '../../components/ScreenHeader';
 
 const EMERALD = COLORS.emerald;
 const EMERALD_SOFT = COLORS.emeraldSoft;
@@ -158,16 +159,7 @@ export default function StudentStaffCodeSetupScreen() {
   return (
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={10}>
-          <ChevronLeftIcon color={EMERALD} />
-          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
-        </TouchableOpacity>
-        <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>{t('code_setup.header_title', 'Student & Staff Codes')}</Text>
-        </View>
-        <View style={{ minWidth: 72 }} />
-      </View>
+      <ScreenHeader title={t('code_setup.header_title', 'Student & Staff Codes')} />
 
       <View style={styles.tabRow}>
         <TouchableOpacity style={[styles.tab, tab === 'student' && styles.tabActive]} onPress={() => setTab('student')}>

@@ -226,7 +226,14 @@ export default function RootNavigator() {
           why: RN's StatusBar calls the Android native module's setColor()
           for any mounted instance regardless of props, and that method is
           missing on this build, which crashes the whole app. */}
-      <NavigationContainer theme={APP_NAV_THEME}>
+      {/* Keyed on auth state so the whole navigation tree remounts when the
+          user signs in or out. Most routes below (AccountSettings, the
+          academic/admin screens, etc.) are registered OUTSIDE the user
+          conditional, so they stay valid in both states - without this
+          remount, logging out from one of them leaves it sitting on top of
+          the stack: the screen never switches to Login, and going back
+          finds nothing underneath it ("GO_BACK was not handled"). */}
+      <NavigationContainer key={user ? 'authed' : 'guest'} theme={APP_NAV_THEME}>
         <Stack.Navigator
           screenOptions={{ headerShown: false, animation: 'fade' }}
           screenLayout={({ route, navigation: screenNavigation, children }) =>

@@ -11,7 +11,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { ChevronLeft, CircleCheck, Clock } from 'lucide-react-native';
+import { Check, ChevronLeft, Clock, Layers, Smartphone, Zap } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import {
@@ -27,7 +27,6 @@ import { GLASS, COLORS, RADIUS, SHADOW } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
 
 const EMERALD = COLORS.emerald;
-const EMERALD_SOFT = COLORS.emeraldSoft;
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
 const HAIRLINE = COLORS.border;
@@ -50,6 +49,22 @@ function intervalLabel(interval: AdminSubscriptionPackage['interval'], t: (k: st
       return t('subscribe.interval_lifetime', 'One-time, lifetime');
     default:
       return t('subscribe.interval_days', 'Days');
+  }
+}
+
+// "per month" / "per year" / "one-time" next to the price - distinct from
+// intervalLabel's pill text (which names the billing cadence), this is the
+// unit the price itself is quoted in.
+function priceUnitLabel(interval: AdminSubscriptionPackage['interval'], t: (k: string, f: string) => string) {
+  switch (interval) {
+    case 'monthly':
+      return t('subscribe.per_month', 'per month');
+    case 'yearly':
+      return t('subscribe.per_year', 'per year');
+    case 'life_time':
+      return t('subscribe.one_time', 'one-time');
+    default:
+      return t('subscribe.per_period', 'per period');
   }
 }
 
@@ -128,6 +143,35 @@ export default function SubscribeScreen() {
   };
 
   const pendingRequest = status?.pending_request ?? null;
+  const selectedPackage = packages.find((pkg) => pkg.id === selectedId) ?? null;
+  const isPaidPlanSelected = !!selectedPackage && Number(selectedPackage.price) > 0;
+
+  // TEMPORARY, development-only: simulates a GCash payment so the submit
+  // flow can be exercised end-to-end before PayMongo is actually wired up.
+  // No real charge happens here - remove once real GCash checkout lands.
+  const handleGcashDevPay = async () => {
+    if (!token || !selectedId) return;
+    setIsSubmitting(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      await submitSubscriptionRequest(token, {
+        package_id: selectedId,
+        payment_reference: 'GCash (dev simulated payment)',
+      });
+      Alert.alert(
+        t('subscribe.submitted_title', 'Request submitted'),
+        t('subscribe.submitted_body', "We'll let you know once it's reviewed."),
+      );
+      navigation.goBack();
+    } catch (err) {
+      Alert.alert(
+        t('subscribe.submit_error_title', "Couldn't submit request"),
+        err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <View style={styles.flex}>
@@ -183,6 +227,10 @@ export default function SubscribeScreen() {
             <View style={{ gap: 10 }}>
               {packages.map((pkg) => {
                 const isSelected = pkg.id === selectedId;
+                const PlanIcon = /enterprise/i.test(pkg.name) || /enterprise/i.test(pkg.package_type) ? Zap : Layers;
+                const limitText = pkg.student_limit
+                  ? t('subscribe.includes_students', 'Includes up to {limit} students').replace('{limit}', pkg.student_limit)
+                  : t('subscribe.includes_unlimited_students', 'Includes unlimited students');
                 return (
                   <TouchableOpacity
                     key={pkg.id}
@@ -191,28 +239,64 @@ export default function SubscribeScreen() {
                     onPress={() => setSelectedId(pkg.id)}
                   >
                     <View style={styles.packageHeaderRow}>
-                      <Text style={styles.packageName}>{pkg.name}</Text>
-                      {isSelected ? <CircleCheck size={20} color={EMERALD} strokeWidth={2.2} /> : null}
-                    </View>
-                    <Text style={styles.packagePrice}>
-                      {pkg.price} · {intervalLabel(pkg.interval, t)}
-                    </Text>
-                    <Text style={styles.packageMeta}>
-                      {t('subscribe.student_limit', '{limit} students').replace(
-                        '{limit}',
-                        pkg.student_limit || t('subscribe.unlimited', 'Unlimited'),
-                      )}
-                    </Text>
-                    {pkg.description ? (
-                      <Text style={styles.packageDesc} numberOfLines={2}>
-                        {pkg.description}
+                      <View style={styles.packageIconWrap}>
+                        <PlanIcon size={20} color="#FFFFFF" strokeWidth={1.8} />
+                      </View>
+                      <Text style={styles.packageName} numberOfLines={1}>
+                        {pkg.name}
                       </Text>
-                    ) : null}
+                      <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
+                        {isSelected ? <Check size={14} color="#FFFFFF" strokeWidth={3} /> : null}
+                      </View>
+                    </View>
+
+                    <View style={styles.packageDivider} />
+
+                    <View style={styles.packageBody}>
+                      <View style={styles.intervalPill}>
+                        <View style={styles.intervalDot} />
+                        <Text style={styles.intervalPillText}>{intervalLabel(pkg.interval, t)}</Text>
+                      </View>
+
+                      <View style={styles.priceRow}>
+                        <Text style={styles.priceValue}>{pkg.price}</Text>
+                        <Text style={styles.priceUnit}>{priceUnitLabel(pkg.interval, t)}</Text>
+                      </View>
+
+                      <Text style={styles.packageDesc}>
+                        {limitText}
+                        {pkg.description ? `. ${pkg.description}` : '.'}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
                 );
               })}
             </View>
           )}
+
+          {__DEV__ && isPaidPlanSelected ? (
+            <>
+              <TouchableOpacity
+                style={[styles.gcashButton, isSubmitting && { opacity: 0.6 }]}
+                onPress={handleGcashDevPay}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Smartphone size={18} color="#FFFFFF" strokeWidth={2} />
+                    <Text style={styles.gcashButtonText}>
+                      {t('subscribe.pay_gcash_dev', 'Pay with GCash (Dev Test)')}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+              <Text style={styles.devNote}>
+                {t('subscribe.gcash_dev_note', 'Development only — no real charge is made.')}
+              </Text>
+            </>
+          ) : null}
 
           <Text style={styles.fieldLabel}>{t('subscribe.payment_reference_label', 'Payment note (optional)')}</Text>
           <TextInput
@@ -273,20 +357,82 @@ const styles = StyleSheet.create({
   },
   emptyText: { fontSize: 13.5, color: SUBTLE, textAlign: 'center', paddingVertical: 30 },
 
+  // Icon-card radio pattern: header row (icon badge + title + checkbox) over
+  // a divider, then a pill tag / big price / description body - selection
+  // reads through the border alone (2px emerald vs 1px hairline), not a
+  // background tint, so the card stays legible either way.
   packageCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: RADIUS.lg,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: HAIRLINE,
-    padding: 16,
+    overflow: 'hidden',
     ...SHADOW.level1,
   },
-  packageCardActive: { borderColor: EMERALD, backgroundColor: EMERALD_SOFT },
-  packageHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  packageName: { fontSize: 15.5, fontWeight: '700', color: INK },
-  packagePrice: { fontSize: 13, color: SUBTLE, marginTop: 4, fontWeight: '600' },
-  packageMeta: { fontSize: 12, color: SUBTLE, marginTop: 2 },
-  packageDesc: { fontSize: 12, color: SUBTLE, marginTop: 6, lineHeight: 16 },
+  packageCardActive: { borderWidth: 2, borderColor: INK },
+  packageHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  // Solid black, same treatment as the now-black checkbox indicator, rather
+  // than a bordered white square with a black glyph.
+  packageIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: INK,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  packageName: { fontSize: 16, fontWeight: '700', color: INK, flex: 1 },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    borderColor: HAIRLINE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: { backgroundColor: INK, borderColor: INK },
+  packageDivider: { height: 1, backgroundColor: HAIRLINE },
+  packageBody: { padding: 16 },
+  intervalPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: HAIRLINE,
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginBottom: 16,
+  },
+  intervalDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: EMERALD },
+  intervalPillText: { fontSize: 12, fontWeight: '700', color: INK },
+  priceRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
+  priceValue: { fontSize: 30, fontWeight: '800', color: INK, letterSpacing: -0.5 },
+  priceUnit: { fontSize: 14, color: SUBTLE, marginBottom: 4 },
+  packageDesc: { fontSize: 13.5, color: SUBTLE, marginTop: 8, lineHeight: 20 },
+
+  // GCash brand blue - matches the app's official button color, kept
+  // visually distinct from the emerald submit button below it.
+  gcashButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#0072CE',
+    borderRadius: RADIUS.pill,
+    paddingVertical: 16,
+    marginTop: 24,
+  },
+  gcashButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
+  devNote: { fontSize: 11.5, color: SUBTLE, textAlign: 'center', marginTop: 8 },
 
   fieldLabel: { fontSize: 13, fontWeight: '600', color: INK, marginBottom: 8, marginTop: 20 },
   fieldInput: {

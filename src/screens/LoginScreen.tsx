@@ -712,9 +712,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 999,
-    backgroundColor: INK,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: BORDER,
   },
-  stepPillText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6, color: ACCENT_LIGHT },
+  // ACCENT_MID, not ACCENT_LIGHT - the lighter green measures under 3:1 on
+  // a white pill (it was only legible before against the dark INK fill).
+  stepPillText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6, color: ACCENT_MID },
 
   hero: { marginTop: 16 },
   title: { fontSize: 34, fontWeight: '800', color: INK, lineHeight: 39, letterSpacing: -0.5 },

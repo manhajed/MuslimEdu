@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -97,6 +97,17 @@ export default function TeacherGradebookClassesScreen() {
     load({ silent: true });
   };
 
+  // Teachers grade by quarter, not by exam - only categories the admin
+  // tagged Q1-Q4 (AdminExamCategoriesScreen) show up here at all. Weighted
+  // exam-only categories (Quizzes, Midterm, ...) stay admin/assessment-side.
+  const quarterCategories = useMemo(
+    () =>
+      examCategories
+        .filter((c) => c.quarter != null)
+        .sort((a, b) => (a.quarter ?? 0) - (b.quarter ?? 0)),
+    [examCategories]
+  );
+
   const goToRoster = (item: GradebookClassOption, examCategory: ExamCategoryOption) => {
     (navigation as any).navigate('TeacherGradebookRoster', {
       sectionId: item.section_id,
@@ -104,7 +115,7 @@ export default function TeacherGradebookClassesScreen() {
       examCategoryId: examCategory.id,
       classLabel: `${item.class_name ?? ''} - ${item.section_name}`.trim(),
       subjectLabel: item.subject_name ?? t('teacher_gradebook_classes.subject', 'Subject'),
-      examCategoryLabel: examCategory.name,
+      examCategoryLabel: t('teacher_gradebook_classes.quarter_label', 'Quarter {n}').replace('{n}', String(examCategory.quarter)),
     });
   };
 
@@ -148,10 +159,10 @@ export default function TeacherGradebookClassesScreen() {
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
               ) : null}
-              {!error && examCategories.length === 0 ? (
+              {!error && quarterCategories.length === 0 ? (
                 <View style={styles.errorBanner}>
                   <Text style={styles.errorText}>
-                    {t('teacher_gradebook_classes.no_exam_categories', 'No exam categories are set up for this session yet. Ask an admin to add one before entering grades.')}
+                    {t('teacher_gradebook_classes.no_quarter_categories', 'No quarters are set up for this session yet. Ask an admin to tag Q1-Q4 exam categories before entering grades.')}
                   </Text>
                 </View>
               ) : null}
@@ -182,15 +193,17 @@ export default function TeacherGradebookClassesScreen() {
                 </TouchableOpacity>
                 {isExpanded ? (
                   <View style={styles.examRow}>
-                    <Text style={styles.examLabel}>{t('teacher_gradebook_classes.choose_exam', 'Choose an exam:')}</Text>
+                    <Text style={styles.examLabel}>{t('teacher_gradebook_classes.choose_quarter', 'Choose a quarter:')}</Text>
                     <View style={styles.examChipWrap}>
-                      {examCategories.map((cat) => (
+                      {quarterCategories.map((cat) => (
                         <TouchableOpacity
                           key={cat.id}
                           style={styles.examChip}
                           onPress={() => goToRoster(item, cat)}
                         >
-                          <Text style={styles.examChipText}>{cat.name}</Text>
+                          <Text style={styles.examChipText}>
+                            {t('teacher_gradebook_classes.quarter_chip', 'Q{n}').replace('{n}', String(cat.quarter))}
+                          </Text>
                         </TouchableOpacity>
                       ))}
                     </View>

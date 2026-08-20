@@ -14,6 +14,7 @@ import StudentIdCard, { CARD_THEMES, CardTheme } from '../../components/StudentI
 import UserAvatar from '../../components/UserAvatar';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import GlassBackground from '../../components/glass/GlassBackground';
+import ScreenHeader from '../../components/ScreenHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, RADIUS, SHADOW, SPACING, BRAND } from '../../theme/glass';
 
@@ -169,13 +170,7 @@ export default function StaffIdCardsScreen() {
   return (
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-          <IconChevronLeft color={INK} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('staff_id_cards.title', 'Staff ID Cards')}</Text>
-        <View style={{ width: 22 }} />
-      </View>
+      <ScreenHeader title={t('staff_id_cards.title', 'Staff ID Cards')} />
 
       <View style={styles.tabRow}>
         {ROLE_TABS.map((tab) => (

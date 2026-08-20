@@ -208,7 +208,7 @@ export default function TeacherGradebookRosterScreen() {
               ) : null}
               {students.length > 0 ? (
                 <Text style={styles.noteText}>
-                  {t('teacher_gradebook_roster.shared_comment_note', "The comment field is shared across every subject for this exam - leave it blank to keep whatever another subject teacher already wrote.")}
+                  {t('teacher_gradebook_roster.shared_comment_note', "The comment field is shared across every subject for this quarter - leave it blank to keep whatever another subject teacher already wrote.")}
                 </Text>
               ) : null}
             </>

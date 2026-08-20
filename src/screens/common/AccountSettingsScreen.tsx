@@ -1,9 +1,7 @@
 import React, { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  ChevronLeft,
   ChevronRight,
   Type,
   Globe,
@@ -15,6 +13,7 @@ import {
   Phone,
   BellRing,
   KeyRound,
+  LogOut,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
@@ -22,6 +21,7 @@ import { DISPLAY_SCALE_OPTIONS, useDisplayScale } from '../../context/DisplaySca
 import { INK, SUBTLE } from '../dashboards/DashboardShell';
 import { BRAND } from '../../theme/glass';
 import { Skeleton } from '../../components/Skeleton';
+import ScreenHeader from '../../components/ScreenHeader';
 import {
   UserSettings,
   UserSettingsOptions,
@@ -49,6 +49,11 @@ import { AccountSettingField, AccountSettingOption } from './AccountSettingPicke
  * own screens - flipping a switch already IS the whole interaction, a
  * dedicated wizard page for a single on/off choice would be friction with
  * no benefit.
+ *
+ * Log Out lives here too (moved off MenuScreen, which used to append its
+ * own copy under every role's dashboard) - same bordered-card design
+ * (danger icon badge + title/subtitle + chevron, confirm-before-signing-out)
+ * as one entry point instead of one per role.
  */
 
 const BORDER = '#E4E9E5';
@@ -64,9 +69,6 @@ function languageLabel(code: string) {
   return LANGUAGE_LABELS[code] ?? labelize(code);
 }
 
-function IconChevronLeft({ color }: { color: string }) {
-  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
-}
 function IconChevronRight({ color }: { color: string }) {
   return <ChevronRight size={18} color={color} strokeWidth={2.2} />;
 }
@@ -122,7 +124,7 @@ function SectionLabel({ title }: { title: string }) {
 
 function ListSkeleton() {
   return (
-    <View style={styles.content}>
+    <View style={[styles.content, { paddingTop: 16 }]}>
       {[0, 1].map((section) => (
         <View key={section} style={{ marginBottom: 20 }}>
           <Skeleton width={130} height={12} style={{ marginBottom: 10, borderRadius: 4 }} />
@@ -142,8 +144,7 @@ function ListSkeleton() {
 
 export default function AccountSettingsScreen() {
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const { t } = useLocale();
   const { scale, setScale } = useDisplayScale();
 
@@ -151,7 +152,8 @@ export default function AccountSettingsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [options, setOptions] = useState<UserSettingsOptions | null>(null);
-
+  const [logoutVisible, setLogoutVisible] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const load = useCallback(async () => {
     if (!token) return;
     setError(null);
@@ -176,6 +178,24 @@ export default function AccountSettingsScreen() {
     (navigation as any).navigate('AccountSettingPicker', { settingField, title, options: pickerOptions, currentKey });
   };
 
+  // In-app modal rather than Alert.alert - the native dialog's buttons were
+  // firing their press but never running the handler on some Android builds,
+  // so "Log Out" appeared dead. Owning the buttons keeps them tappable and
+  // lets the confirm show a pending state while the request is in flight.
+  const runLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      // logout() unmounts this screen on success (RootNavigator swaps to the
+      // auth stack); resetting matters for the failure path, where the modal
+      // stays up and the button needs to be pressable again.
+      setLoggingOut(false);
+      setLogoutVisible(false);
+    }
+  };
+
   const toggleField = async (field: 'show_email' | 'show_phone', value: boolean) => {
     if (!token || !settings) return;
     const previous = settings[field];
@@ -190,17 +210,10 @@ export default function AccountSettingsScreen() {
   };
 
   const header = (
-    <View style={[styles.header, { paddingTop: insets.top }]}>
-      <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={8}>
-        <IconChevronLeft color={BRAND.emeraldDeep} />
-      </TouchableOpacity>
-      <View style={styles.headerText}>
-        <Text style={styles.headerTitle}>{t('account_settings.header_title', 'Account Settings')}</Text>
-        <Text style={styles.headerSub}>
-          {t('account_settings.header_subtitle', 'Language, appearance, privacy and password')}
-        </Text>
-      </View>
-    </View>
+    <ScreenHeader
+      title={t('account_settings.header_title', 'Account Settings')}
+      caption={t('account_settings.header_subtitle', 'Language, appearance, privacy and password')}
+    />
   );
 
   if (loading) {
@@ -232,12 +245,12 @@ export default function AccountSettingsScreen() {
 
   return (
     <View style={styles.flex}>
-      {header}
       <ScrollView contentContainerStyle={styles.content}>
+        {header}
         <SectionLabel title={t('account_settings.accessibility_section', 'Accessibility')} />
         <View style={styles.card}>
           <Row
-            icon={<Type size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<Type size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.display_size_label', 'Text & display size')}
             value={t(`accessibility.size.${displayScaleOpt.key}`, displayScaleOpt.label)}
             isLast
@@ -255,7 +268,7 @@ export default function AccountSettingsScreen() {
         <SectionLabel title={t('account_settings.language_appearance_section', 'Language & appearance')} />
         <View style={styles.card}>
           <Row
-            icon={<Globe size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<Globe size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.language_label', 'Language')}
             value={languageLabel(settings.language)}
             onPress={() =>
@@ -268,7 +281,7 @@ export default function AccountSettingsScreen() {
             }
           />
           <Row
-            icon={<Palette size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<Palette size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.theme_label', 'Theme')}
             value={labelize(settings.theme)}
             onPress={() =>
@@ -281,7 +294,7 @@ export default function AccountSettingsScreen() {
             }
           />
           <Row
-            icon={<CalendarDays size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<CalendarDays size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.calendar_label', 'Calendar')}
             value={labelize(settings.calendar_type)}
             onPress={() =>
@@ -294,7 +307,7 @@ export default function AccountSettingsScreen() {
             }
           />
           <Row
-            icon={<CalendarClock size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<CalendarClock size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.date_format_label', 'Date format')}
             value={settings.date_format}
             isLast
@@ -312,7 +325,7 @@ export default function AccountSettingsScreen() {
         <SectionLabel title={t('account_settings.privacy_section', 'Privacy')} />
         <View style={styles.card}>
           <Row
-            icon={<ShieldCheck size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<ShieldCheck size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.profile_visibility_label', 'Profile visibility')}
             value={labelize(settings.profile_visibility)}
             onPress={() =>
@@ -325,19 +338,19 @@ export default function AccountSettingsScreen() {
             }
           />
           <SwitchRow
-            icon={<Mail size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<Mail size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.show_email_label', 'Show email on my profile')}
             value={settings.show_email}
             onValueChange={(v) => toggleField('show_email', v)}
           />
           <SwitchRow
-            icon={<Phone size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<Phone size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.show_phone_label', 'Show phone on my profile')}
             value={settings.show_phone}
             onValueChange={(v) => toggleField('show_phone', v)}
           />
           <Row
-            icon={<BellRing size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<BellRing size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.digest_emails_label', 'Digest emails')}
             value={labelize(settings.digest_frequency)}
             isLast
@@ -355,13 +368,64 @@ export default function AccountSettingsScreen() {
         <SectionLabel title={t('account_settings.security_section', 'Security')} />
         <View style={styles.card}>
           <Row
-            icon={<KeyRound size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<KeyRound size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.change_password', 'Change password')}
             isLast
             onPress={() => (navigation as any).navigate('ChangePassword')}
           />
         </View>
+
+        <TouchableOpacity style={styles.logoutCard} activeOpacity={0.7} onPress={() => setLogoutVisible(true)}>
+          <View style={styles.logoutIconBadge}>
+            <LogOut size={20} color={INK} strokeWidth={2} />
+          </View>
+          <View style={styles.logoutTextWrap}>
+            <Text style={styles.logoutTitle}>{t('menu.log_out', 'Log Out')}</Text>
+            <Text style={styles.logoutSubtitle}>{t('menu.log_out_subtitle', 'Sign out of your account')}</Text>
+          </View>
+          <IconChevronRight color={SUBTLE} />
+        </TouchableOpacity>
       </ScrollView>
+
+      <Modal
+        visible={logoutVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => (loggingOut ? undefined : setLogoutVisible(false))}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconBadge}>
+              <LogOut size={26} color={INK} strokeWidth={2} />
+            </View>
+            <Text style={styles.modalTitle}>{t('menu.log_out_confirm_title', 'Log out?')}</Text>
+            <Text style={styles.modalMessage}>
+              {t('menu.log_out_confirm_message', "You'll need to sign in again to continue.")}
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.modalConfirmBtn, loggingOut && styles.modalBtnDisabled]}
+              activeOpacity={0.85}
+              onPress={runLogout}
+              disabled={loggingOut}
+            >
+              {loggingOut ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.modalConfirmText}>{t('menu.log_out', 'Log Out')}</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalCancelBtn}
+              activeOpacity={0.85}
+              onPress={() => setLogoutVisible(false)}
+              disabled={loggingOut}
+            >
+              <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -374,24 +438,25 @@ const styles = StyleSheet.create({
   retryBtn: { marginTop: 20, backgroundColor: BRAND.emeraldDeep, paddingHorizontal: 26, paddingVertical: 12, borderRadius: 999 },
   retryText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
 
+  // Transparent and scrolls away with the list rather than pinning as a
+  // bar. Negative horizontal margin cancels the scroll container's own
+  // padding so this row still spans edge to edge with its own inset.
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginHorizontal: -16,
     paddingHorizontal: 16,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#0B1F14',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 3,
   },
-  backBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: EMERALD_SOFT, marginRight: 12 },
+  headerInset: { paddingHorizontal: 16 },
+  backBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   headerText: { flex: 1 },
   headerTitle: { fontSize: 20, fontWeight: '800', color: INK },
   headerSub: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
 
-  content: { padding: 16 },
+  // No top padding - the header is the first scroll child and brings its
+  // own (safe-area) top spacing.
+  content: { paddingHorizontal: 16, paddingBottom: 16 },
   sectionTitle: { fontSize: 13, fontWeight: '800', color: SUBTLE, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10, marginTop: 4, marginLeft: 4 },
 
   card: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: BORDER, overflow: 'hidden', marginBottom: 20 },
@@ -408,4 +473,84 @@ const styles = StyleSheet.create({
   },
   rowTitle: { fontSize: 14.5, fontWeight: '600', color: INK, flex: 1 },
   rowValue: { fontSize: 13.5, color: SUBTLE, marginRight: 6, maxWidth: 120 },
+
+  logoutCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 12,
+    marginBottom: 20,
+  },
+  logoutIconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(28,28,30,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutTextWrap: { flex: 1 },
+  logoutTitle: { fontSize: 15, fontWeight: '700', color: INK },
+  logoutSubtitle: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
+
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(8, 15, 12, 0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingTop: 28,
+    paddingBottom: 20,
+    paddingHorizontal: 22,
+    alignItems: 'center',
+    shadowColor: '#0B1F14',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    elevation: 12,
+  },
+  modalIconBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(28,28,30,0.07)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18,
+  },
+  modalTitle: { fontSize: 19, fontWeight: '800', color: INK, textAlign: 'center' },
+  modalMessage: {
+    fontSize: 13.5,
+    color: SUBTLE,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  modalConfirmBtn: {
+    width: '100%',
+    backgroundColor: INK,
+    borderRadius: 999,
+    paddingVertical: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 50,
+  },
+  modalConfirmText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  modalBtnDisabled: { opacity: 0.7 },
+  modalCancelBtn: {
+    width: '100%',
+    borderRadius: 999,
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  modalCancelText: { color: SUBTLE, fontSize: 15, fontWeight: '700' },
 });

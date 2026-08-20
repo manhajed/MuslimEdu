@@ -20,6 +20,7 @@ import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme, statusColors } from './academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import ScreenHeader from '../../components/ScreenHeader';
 import { Skeleton } from '../../components/Skeleton';
 import { EmptyState } from '../../components/EmptyState';
 
@@ -280,13 +281,12 @@ const SectionListScreen = () => {
     return (
       <View style={styles.container}>
         <GlassBackground variant="canvas" />
-        <View style={[styles.header, { paddingTop: insets.top }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-            <IconChevronLeft color={theme.textPrimary} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('section_list.title', 'Sections')}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        <ScreenHeader
+          title={t('section_list.title', 'Sections')}
+          ink={theme.textPrimary}
+          subtle={theme.textSecondary}
+          backBg={theme.surface}
+        />
         <View style={styles.listContainer}>{[0, 1, 2].map(renderSkeletonCard)}</View>
       </View>
     );
@@ -295,19 +295,19 @@ const SectionListScreen = () => {
   return (
     <View style={styles.container}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-          <IconChevronLeft color={theme.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('section_list.title', 'Sections')}</Text>
-        {userRole === 2 ? (
-          <TouchableOpacity style={styles.addButton} onPress={() => (navigation as any).navigate('SectionForm')}>
-            <Text style={styles.addButtonText}>{t('section_list.add', '+ Add')}</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.headerSpacer} />
-        )}
-      </View>
+      <ScreenHeader
+        title={t('section_list.title', 'Sections')}
+        ink={theme.textPrimary}
+        subtle={theme.textSecondary}
+        backBg={theme.surface}
+        rightAction={
+          userRole === 2 ? (
+            <TouchableOpacity style={styles.addButton} onPress={() => (navigation as any).navigate('SectionForm')}>
+              <Text style={styles.addButtonText}>{t('section_list.add', '+ Add')}</Text>
+            </TouchableOpacity>
+          ) : undefined
+        }
+      />
 
       <View style={styles.searchContainer}>
         <TextInput

@@ -8,6 +8,7 @@ import { useLocale } from '../../context/LocaleContext';
 import { EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
 import { BRAND } from '../../theme/glass';
 import { Skeleton } from '../../components/Skeleton';
+import ScreenHeader from '../../components/ScreenHeader';
 import { Analytics, fetchAcademicAnalytics, fetchAttendanceTrend, TrendPoint } from '../../services/academicAnalyticsService';
 import { fetchSetupStatus, SchoolProfile } from '../../services/academicSetupService';
 import { buildSectionedReportPdf, ReportBlock } from '../../utils/pdfExport';
@@ -219,18 +220,15 @@ export default function AcademicAnalyticsScreen() {
   };
 
   const header = (
-    <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back} hitSlop={8}>
-        <IconChevronLeft color={BRAND.emeraldDeep} />
-      </TouchableOpacity>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.title}>{t('academic_analytics.title', 'Academic Analytics')}</Text>
-        <Text style={styles.sub}>{t('academic_analytics.subtitle', 'Read-only school performance overview')}</Text>
-      </View>
-      <TouchableOpacity onPress={onExportPdf} style={styles.exportBtn} hitSlop={8} disabled={!data || exporting}>
-        <IconFileDown color={data && !exporting ? BRAND.emeraldDeep : SUBTLE} />
-      </TouchableOpacity>
-    </View>
+    <ScreenHeader
+      title={t('academic_analytics.title', 'Academic Analytics')}
+      caption={t('academic_analytics.subtitle', 'Read-only school performance overview')}
+      rightAction={
+        <TouchableOpacity onPress={onExportPdf} style={styles.exportBtn} hitSlop={8} disabled={!data || exporting}>
+          <IconFileDown color={data && !exporting ? BRAND.emeraldDeep : SUBTLE} />
+        </TouchableOpacity>
+      }
+    />
   );
 
   if (loading) {

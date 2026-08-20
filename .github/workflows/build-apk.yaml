@@ -34,11 +34,27 @@ jobs:
           cp -r source-files/src MuslimEdu/src
           cp source-files/App.tsx MuslimEdu/App.tsx
 
+      - name: Copy gluestack-ui / NativeWind config over the CLI template's own
+        run: |
+          cp source-files/.npmrc MuslimEdu/.npmrc
+          cp source-files/babel.config.js MuslimEdu/babel.config.js
+          cp source-files/metro.config.js MuslimEdu/metro.config.js
+          cp source-files/tailwind.config.js MuslimEdu/tailwind.config.js
+          cp source-files/nativewind-env.d.ts MuslimEdu/nativewind-env.d.ts
+
       - name: Copy your app icon over the default one
         run: cp -r source-files/android-icons/* MuslimEdu/android/app/src/main/res/
 
       - name: Lock the app to portrait orientation
         run: sed -i '/android:name=".MainActivity"/a\      android:screenOrientation="portrait"' MuslimEdu/android/app/src/main/AndroidManifest.xml
+
+      - name: Enable New Architecture (required by react-native-reanimated v4)
+        run: |
+          if grep -q '^newArchEnabled=' MuslimEdu/android/gradle.properties; then
+            sed -i 's/^newArchEnabled=.*/newArchEnabled=true/' MuslimEdu/android/gradle.properties
+          else
+            echo 'newArchEnabled=true' >> MuslimEdu/android/gradle.properties
+          fi
 
       - name: Add camera permission for QR/ID scanning
         run: sed -i '/<manifest[^>]*>/a\    <uses-permission android:name="android.permission.CAMERA" />' MuslimEdu/android/app/src/main/AndroidManifest.xml
@@ -100,6 +116,30 @@ jobs:
             "@react-native-community/geolocation@^3.4.0" \
             "@react-native-firebase/app@^21.6.1" \
             "@react-native-firebase/messaging@^21.6.1"
+
+      - name: Install gluestack-ui (NativeWind v4 / Tailwind v3) packages
+        working-directory: MuslimEdu
+        run: |
+          npm install \
+            "@expo/html-elements@^0.12.5" \
+            "@gluestack-ui/core@^4.0.0-alpha.0" \
+            "@gluestack-ui/utils@^4.0.0-alpha.0" \
+            "@legendapp/motion@^2.5.3" \
+            "@react-aria/dialog@^3.6.1" \
+            "@react-aria/focus@^3.22.1" \
+            "@react-aria/interactions@^3.28.1" \
+            "@react-aria/ssr@^3.10.1" \
+            "@react-aria/utils@^3.34.1" \
+            "@react-stately/toggle@^3.10.1" \
+            "nativewind@^4.2.6" \
+            "react-aria@^3.51.0" \
+            "react-dom@19.2.3" \
+            "react-native-reanimated@^4.5.3" \
+            "react-native-worklets@^0.11.4" \
+            "react-stately@^3.49.0" \
+            "tailwind-variants@^0.1.20" \
+            "babel-plugin-module-resolver@^5.0.3" \
+            "tailwindcss@^3.4.19"
 
       - name: Bundle JavaScript into the APK
         working-directory: MuslimEdu

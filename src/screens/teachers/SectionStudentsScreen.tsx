@@ -32,6 +32,7 @@ import UserAvatar from '../../components/UserAvatar';
 import { EmptyState } from '../../components/EmptyState';
 import { useAcademicGlassTheme, AcademicGlassTheme } from './academicGlassTheme';
 import GlassBackground from '../../components/glass/GlassBackground';
+import ScreenHeader from '../../components/ScreenHeader';
 import { RADIUS } from '../../theme/glass';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -405,17 +406,17 @@ export default function SectionStudentsScreen() {
   return (
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-          <IconChevronLeft color={theme.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {roster ? `${roster.class_name ?? ''} · ${roster.section_name}` : t('section_students.title', 'Students')}
-        </Text>
-        <TouchableOpacity onPress={() => setAddVisible(true)} hitSlop={10} style={styles.addButton}>
-          <IconPlus color={theme.accent} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title={roster ? `${roster.class_name ?? ''} · ${roster.section_name}` : t('section_students.title', 'Students')}
+        ink={theme.textPrimary}
+        subtle={theme.textSecondary}
+        backBg={theme.surface}
+        rightAction={
+          <TouchableOpacity onPress={() => setAddVisible(true)} hitSlop={10} style={styles.addButton}>
+            <IconPlus color={theme.accent} />
+          </TouchableOpacity>
+        }
+      />
 
       {roster ? (
         <View style={styles.summaryCard}>

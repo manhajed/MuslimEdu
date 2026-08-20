@@ -177,8 +177,16 @@ export async function fetchMe(token: string): Promise<AuthUser> {
   return normalizeUser(data.user as AuthUser);
 }
 
-/** Calls POST /logout to revoke just this device's token on the server. */
+/**
+ * Calls POST /logout to revoke just this device's token on the server.
+ *
+ * Capped with an AbortController: a bare fetch has no timeout, so against an
+ * unreachable host this would otherwise stay pending indefinitely. Callers
+ * treat it as best-effort cleanup, never as a gate on signing out.
+ */
 export async function logoutRequest(token: string): Promise<void> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
   try {
     await fetch(ENDPOINTS.logout, {
       method: 'POST',
@@ -187,9 +195,13 @@ export async function logoutRequest(token: string): Promise<void> {
         Accept: 'application/json',
         Authorization: `Bearer ${token}`,
       },
+      signal: controller.signal,
     });
   } catch {
-    // Even if this fails (offline, etc.), we still clear the local token below.
+    // Offline, aborted, or server error - the local token is cleared
+    // regardless, so there's nothing to recover here.
+  } finally {
+    clearTimeout(timeout);
   }
 }
 

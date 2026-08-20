@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft, ChevronRight, FileText, IdCard, Plus, Search, UserRound, X } from 'lucide-react-native';
+import { ChevronRight, FileText, IdCard, Plus, Search, UserRound, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchTeacherOverview, TeacherOverview, addTeacher } from '../../services/adminTeacherService';
@@ -19,24 +19,28 @@ import { Skeleton } from '../../components/Skeleton';
 import UserAvatar from '../../components/UserAvatar';
 import AccountWizardSheet, { WizardStepDef, wizardFieldStyles } from '../../components/wizard/AccountWizardSheet';
 
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS, COLORS, RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import ScreenHeader from '../../components/ScreenHeader';
+import { Box } from '../../components/ui/box';
+import { HStack } from '../../components/ui/hstack';
+import { VStack } from '../../components/ui/vstack';
+import { Text as GSText } from '../../components/ui/text';
 const EMERALD = COLORS.emerald;
 const EMERALD_SOFT = COLORS.emeraldSoft;
 const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
 const HAIRLINE = COLORS.border;
 const CANVAS = COLORS.canvas;
-const GLASS_SURFACE = GLASS.fillOnLight;
 const GLASS_SURFACE_STRONG = GLASS.fillOnLightStrong;
-const GLASS_BORDER = GLASS.borderOnLight;
 const DANGER = COLORS.danger;
 
+// No section/department field exists on TeacherOverview, so the "section"
+// color-coding here is by report status instead (submitted vs missing) -
+// the only per-teacher category this screen actually has.
+const STATUS_ACCENT = { submitted: EMERALD, missing: DANGER };
+
 // --- Icons (matches the app's existing inline-SVG icon style) ---
-function ChevronLeftIcon({ color }: { color: string }) {
-  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
-}
 function SearchIcon({ color }: { color: string }) {
   return <Search size={17} color={color} strokeWidth={2} />;
 }
@@ -63,6 +67,10 @@ function EmptyIcon() {
 }
 
 // --- Teacher row ---------------------------------------------------------
+// Same card language as StudentListScreen's redesign: bordered rounded
+// card, avatar, bold name, one plain-text subtitle line - the status pill
+// (dot + colored chip background) collapsed into colored text, same as
+// that screen's unplaced-section warning.
 const TeacherRow = React.memo(function TeacherRow({
   item,
   onPress,
@@ -71,34 +79,45 @@ const TeacherRow = React.memo(function TeacherRow({
   onPress: (item: TeacherOverview) => void;
 }) {
   const { t } = useLocale();
+  const statusText = item.submitted
+    ? item.submitted_by
+      ? t('admin_teacher_list.report_submitted_by', 'Report submitted · {name}').replace('{name}', item.submitted_by)
+      : t('admin_teacher_list.report_submitted', 'Report submitted')
+    : t('admin_teacher_list.missing_report', 'Missing report');
+  const accentColor = item.submitted ? STATUS_ACCENT.submitted : STATUS_ACCENT.missing;
   return (
-    <TouchableOpacity style={styles.row} activeOpacity={0.85} onPress={() => onPress(item)}>
-      <UserAvatar
-        name={item.name}
-        photo={item.photo}
-        size={48}
-        ringColor={HAIRLINE}
-        dotColor={item.submitted ? EMERALD : DANGER}
-      />
-      <View style={[styles.flex1, { marginLeft: 14 }]}>
-        <Text style={styles.rowName} numberOfLines={1}>{item.name || t('admin_teacher_list.unnamed_teacher', 'Unnamed teacher')}</Text>
-        {item.submitted ? (
-          <View style={[styles.statusPill, styles.statusPillOk]}>
-            <View style={[styles.statusDot, { backgroundColor: EMERALD }]} />
-            <Text style={styles.statusPillTextOk} numberOfLines={1}>
-              {item.submitted_by
-                ? t('admin_teacher_list.report_submitted_by', 'Report submitted · {name}').replace('{name}', item.submitted_by)
-                : t('admin_teacher_list.report_submitted', 'Report submitted')}
-            </Text>
-          </View>
-        ) : (
-          <View style={[styles.statusPill, styles.statusPillMissing]}>
-            <View style={[styles.statusDot, { backgroundColor: DANGER }]} />
-            <Text style={styles.statusPillTextMissing}>{t('admin_teacher_list.missing_report', 'Missing report')}</Text>
-          </View>
-        )}
-      </View>
-      <ChevronRightIcon color="#C4C9CF" />
+    <TouchableOpacity activeOpacity={0.85} onPress={() => onPress(item)}>
+      <HStack
+        space="md"
+        className="items-center rounded-xl border p-3 mb-2"
+        style={{
+          backgroundColor: `${accentColor}14`,
+          borderColor: `${accentColor}33`,
+          borderLeftWidth: 3,
+          borderLeftColor: accentColor,
+        }}
+      >
+        <UserAvatar
+          name={item.name}
+          photo={item.photo}
+          size={40}
+          ringColor={HAIRLINE}
+          dotColor={accentColor}
+        />
+        <VStack className="flex-1">
+          <GSText className="text-foreground text-[15px] font-bold" numberOfLines={1}>
+            {item.name || t('admin_teacher_list.unnamed_teacher', 'Unnamed teacher')}
+          </GSText>
+          <GSText
+            className="text-xs mt-1 font-semibold"
+            style={{ color: accentColor }}
+            numberOfLines={1}
+          >
+            {statusText}
+          </GSText>
+        </VStack>
+        <ChevronRightIcon color="#C4C9CF" />
+      </HStack>
     </TouchableOpacity>
   );
 });
@@ -344,7 +363,6 @@ function AddTeacherSheet({
 }
 
 export default function AdminTeacherListScreen() {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
   const { t } = useLocale();
@@ -415,21 +433,16 @@ export default function AdminTeacherListScreen() {
     });
   };
 
-  return (
-    <View style={styles.flex}>
-      <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={10}>
-          <ChevronLeftIcon color={EMERALD} />
-          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
-        </TouchableOpacity>
-        <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>{t('admin_teacher_list.header_title', 'Teachers')}</Text>
-        </View>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setAddSheetOpen(true)} hitSlop={8}>
-          <PlusIcon color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+  const listHeader = (
+    <>
+      <ScreenHeader
+        title={t('admin_teacher_list.header_title', 'Teachers')}
+        rightAction={
+          <TouchableOpacity style={styles.addBtn} onPress={() => setAddSheetOpen(true)} hitSlop={8}>
+            <PlusIcon color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       <View style={styles.searchWrap}>
         <SearchIcon color={SUBTLE} />
@@ -441,31 +454,44 @@ export default function AdminTeacherListScreen() {
           onChangeText={setQuery}
         />
       </View>
+    </>
+  );
+
+  return (
+    <View style={styles.flex}>
+      <GlassBackground variant="canvas" />
 
       {isLoading ? (
-        <View style={styles.listContent}>
-          {[0, 1, 2, 3].map((i) => (
-            <View key={i} style={styles.row}>
-              <Skeleton width={44} height={44} borderRadius={22} />
-              <View style={{ marginLeft: 12, flex: 1 }}>
-                <Skeleton width="60%" height={14} style={{ marginBottom: 6 }} />
-                <Skeleton width="40%" height={11} />
-              </View>
-            </View>
-          ))}
+        <View style={styles.flex1}>
+          {listHeader}
+          <View style={styles.listContent}>
+            {[0, 1, 2, 3].map((i) => (
+              <Box key={i} className="flex-row items-center bg-background rounded-xl border border-border p-3 mb-2">
+                <Skeleton width={40} height={40} borderRadius={20} />
+                <View style={{ marginLeft: 12, flex: 1 }}>
+                  <Skeleton width="60%" height={14} style={{ marginBottom: 6 }} />
+                  <Skeleton width="40%" height={11} />
+                </View>
+              </Box>
+            ))}
+          </View>
         </View>
       ) : error ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={load} style={styles.retryButton}>
-            <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
-          </TouchableOpacity>
+        <View style={styles.flex1}>
+          {listHeader}
+          <View style={styles.center}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity onPress={load} style={styles.retryButton}>
+              <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       ) : (
         <FlatList
           data={filtered}
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.listContent}
+          ListHeaderComponent={listHeader}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
           renderItem={({ item }) => <TeacherRow item={item} onPress={setSelectedTeacher} />}
           ListEmptyComponent={
@@ -499,20 +525,6 @@ export default function AdminTeacherListScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: 'transparent' },
   flex1: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-    backgroundColor: GLASS_SURFACE,
-    borderBottomWidth: 1,
-    borderBottomColor: GLASS_BORDER,
-  },
-  backBtn: { flexDirection: 'row', alignItems: 'center', minWidth: 72 },
-  backText: { color: EMERALD, fontSize: 16, fontWeight: '600', marginLeft: 2 },
-  headerTitleWrap: { alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: INK },
   addBtn: {
     width: 38,
     height: 38,
@@ -529,48 +541,18 @@ const styles = StyleSheet.create({
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: GLASS_SURFACE,
+    backgroundColor: COLORS.surface,
     borderRadius: RADIUS.pill,
-    borderWidth: 1,
-    borderColor: HAIRLINE,
     paddingHorizontal: 16,
     height: 48,
     gap: 10,
-    marginHorizontal: 16,
+    marginHorizontal: 20,
     marginTop: 16,
-    marginBottom: 6,
   ...SHADOW.level1,
   },
   searchInput: { flex: 1, fontSize: 14.5, color: INK, padding: 0 },
 
-  listContent: { padding: 16, paddingBottom: 40 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: GLASS_SURFACE,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: HAIRLINE,
-    padding: 16,
-    marginBottom: 12,
-  ...SHADOW.level2,
-  },
-  rowName: { fontSize: 15.5, fontWeight: '700', color: INK },
-  statusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderRadius: RADIUS.pill,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    marginTop: 6,
-    gap: 6,
-  },
-  statusPillOk: { backgroundColor: EMERALD_SOFT },
-  statusPillMissing: { backgroundColor: 'rgba(239,68,68,0.1)' },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusPillTextOk: { fontSize: 11.5, color: EMERALD, fontWeight: '700' },
-  statusPillTextMissing: { fontSize: 11.5, color: DANGER, fontWeight: '700' },
+  listContent: { paddingHorizontal: 12, paddingBottom: 40 },
 
   emptyWrap: { alignItems: 'center', paddingTop: 50, paddingHorizontal: 30 },
   emptyTitle: { fontSize: 15.5, fontWeight: '700', color: INK, marginTop: 14 },

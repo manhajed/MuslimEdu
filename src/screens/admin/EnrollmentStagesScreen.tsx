@@ -8,13 +8,13 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronUp, ChevronDown, Flag, Milestone } from 'lucide-react-native';
+import { ChevronUp, ChevronDown, Flag, Milestone } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import ScreenHeader from '../../components/ScreenHeader';
 import { BentoGrid } from '../../components/glass/BentoGridCard';
 import { Skeleton } from '../../components/Skeleton';
 import { EmptyState } from '../../components/EmptyState';
@@ -43,9 +43,6 @@ import {
  * id order to admin_enrollment_stages_reorder in one call.
  */
 
-function IconChevronLeft({ color }: { color: string }) {
-  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
-}
 function IconChevronUp({ color, disabled }: { color: string; disabled?: boolean }) {
   return <ChevronUp size={16} color={color} strokeWidth={2.2} opacity={disabled ? 0.3 : 1} />;
 }
@@ -67,7 +64,6 @@ function approverLabel(role: WorkflowStage['approver_role'], t: (key: string, fa
 
 export default function EnrollmentStagesScreen() {
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
   const theme = useAcademicGlassTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { token } = useAuth();
@@ -211,13 +207,12 @@ export default function EnrollmentStagesScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={[styles.header, { paddingTop: insets.top }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-            <IconChevronLeft color={theme.textPrimary} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('enrollment_stages.title', 'Enrollment Stages')}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        <ScreenHeader
+          title={t('enrollment_stages.title', 'Enrollment Stages')}
+          ink={theme.textPrimary}
+          subtle={theme.textSecondary}
+          backBg={theme.surface}
+        />
         <BentoGrid>{[0, 1, 2, 3].map(renderSkeletonCard)}</BentoGrid>
         <BottomNavBar />
       </View>
@@ -227,19 +222,25 @@ export default function EnrollmentStagesScreen() {
   return (
     <View style={styles.container}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-          <IconChevronLeft color={theme.textPrimary} />
+      <ScreenHeader
+        title={t('enrollment_stages.title', 'Enrollment Stages')}
+        caption={t('enrollment_stages.helper', 'Students move through these stages in order. Use the arrows on each tile to reorder.')}
+        ink={theme.textPrimary}
+        subtle={theme.textSecondary}
+        backBg={theme.surface}
+        rightAction={
+          <TouchableOpacity style={styles.addButton} onPress={() => (navigation as any).navigate('EnrollmentStageForm')}>
+            <Text style={styles.addButtonText}>{t('enrollment_stages.add', '+ Add')}</Text>
+          </TouchableOpacity>
+        }
+      />
+
+      <View style={styles.quickLinkRow}>
+        <TouchableOpacity style={styles.quickLinkChip} onPress={() => (navigation as any).navigate('EnrollmentFeeTypes')}>
+          <Text style={styles.quickLinkText}>{t('enrollment_stages.fees', 'Fees')}</Text>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('enrollment_stages.title', 'Enrollment Stages')}</Text>
-        <TouchableOpacity style={styles.pillButton} onPress={() => (navigation as any).navigate('EnrollmentFeeTypes')}>
-          <Text style={styles.pillButtonText}>{t('enrollment_stages.fees', 'Fees')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.pillButton} onPress={() => (navigation as any).navigate('EnrollmentWorkflowList')}>
-          <Text style={styles.pillButtonText}>{t('enrollment_stages.students', 'Students')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.addButton} onPress={() => (navigation as any).navigate('EnrollmentStageForm')}>
-          <Text style={styles.addButtonText}>{t('enrollment_stages.add', '+ Add')}</Text>
+        <TouchableOpacity style={styles.quickLinkChip} onPress={() => (navigation as any).navigate('EnrollmentWorkflowList')}>
+          <Text style={styles.quickLinkText}>{t('enrollment_stages.students', 'Students')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -251,10 +252,6 @@ export default function EnrollmentStagesScreen() {
           </TouchableOpacity>
         </View>
       ) : null}
-
-      <Text style={styles.helperText}>
-        {t('enrollment_stages.helper', 'Students move through these stages in order. Use the arrows on each tile to reorder.')}
-      </Text>
 
       <ScrollView style={{ flex: 1 }}>
         {stages.length === 0 ? (
@@ -278,26 +275,15 @@ export default function EnrollmentStagesScreen() {
 const makeStyles = (theme: AcademicGlassTheme) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.background },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      backgroundColor: theme.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-    },
-    headerTitle: { fontSize: 22, fontWeight: '700', color: theme.textPrimary },
-    headerTitleFlex: { flex: 1, marginLeft: 8 },
-    backButton: { width: 32 },
-    headerSpacer: { width: 32 },
-    addButton: { backgroundColor: theme.accent, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6 },
-    addButtonText: { color: theme.onAccent, fontWeight: '600', fontSize: 14 },
-    pillButton: { borderWidth: 1, borderColor: theme.borderStrong, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, marginRight: 8 },
-    pillButtonText: { color: theme.textPrimary, fontWeight: '600', fontSize: 13 },
+    addButton: { backgroundColor: theme.accent, paddingHorizontal: 16, paddingVertical: 9, borderRadius: RADIUS.pill },
+    addButtonText: { color: theme.onAccent, fontWeight: '700', fontSize: 14 },
 
-    helperText: { fontSize: 12.5, color: theme.textSecondary, paddingHorizontal: 16, paddingTop: 12, lineHeight: 18 },
+    // Secondary nav as a slim chip row under the title, Apple Settings-
+    // style quick links, instead of two more buttons crowded onto the
+    // header row next to +Add.
+    quickLinkRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginTop: 16 },
+    quickLinkChip: { borderWidth: 1, borderColor: theme.borderStrong, paddingHorizontal: 14, paddingVertical: 8, borderRadius: RADIUS.pill },
+    quickLinkText: { color: theme.textPrimary, fontWeight: '600', fontSize: 13 },
 
     errorBanner: {
       flexDirection: 'row',
@@ -312,32 +298,45 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     errorBannerText: { color: theme.danger, fontSize: 13, flex: 1, marginRight: 8 },
     retryText: { color: theme.danger, fontWeight: '700', fontSize: 13 },
 
+    // Apple-card language: no hard border, a soft ambient shadow instead,
+    // generous corner radius and padding so the tile reads as one solid
+    // rounded slab rather than a boxed-in panel.
     tile: {
       width: '47%',
-      minHeight: 180,
+      minHeight: 184,
       backgroundColor: theme.surface,
-      borderRadius: RADIUS.lg,
-      borderWidth: 1,
-      borderColor: theme.border,
-      padding: 14,
-      ...theme.elevation2,
+      borderRadius: 24,
+      padding: 18,
+      shadowColor: '#0B1F14',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.06,
+      shadowRadius: 16,
+      elevation: 3,
     },
-    tileTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
+    tileTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
     iconWrap: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
+      width: 46,
+      height: 46,
+      borderRadius: 23,
       backgroundColor: theme.accentSoft,
       alignItems: 'center',
       justifyContent: 'center',
     },
     reorderCol: { alignItems: 'center' },
     orderNum: { fontSize: 11.5, fontWeight: '700', color: theme.textSecondary, marginVertical: 2 },
-    name: { fontSize: 15, fontWeight: '700', color: theme.textPrimary, marginBottom: 8 },
-    tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
-    tag: { backgroundColor: theme.surfaceVariant, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+    name: { fontSize: 16, fontWeight: '800', color: theme.textPrimary, marginBottom: 10, letterSpacing: -0.2 },
+    tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
+    tag: { backgroundColor: theme.surfaceVariant, paddingHorizontal: 9, paddingVertical: 4, borderRadius: RADIUS.pill },
     tagText: { fontSize: 10.5, fontWeight: '600', color: theme.textSecondary },
     tileFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' },
-    statusBadgeText: { fontSize: 10.5, fontWeight: '600', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, overflow: 'hidden' },
+    statusBadgeText: {
+      fontSize: 10.5,
+      fontWeight: '700',
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: RADIUS.pill,
+      overflow: 'hidden',
+      textTransform: 'capitalize',
+    },
     deleteText: { color: theme.danger, fontSize: 11.5, fontWeight: '600' },
   });

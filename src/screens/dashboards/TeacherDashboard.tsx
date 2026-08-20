@@ -668,7 +668,10 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   scrollFlex: { flex: 1, zIndex: 1, elevation: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 130 },
+  // paddingBottom is just breathing room under the last card - the old 130
+  // dated from when the tab bar floated over the content; it lays out inline
+  // below the screen now, so that much padding only read as dead space.
+  scrollContent: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: 24 },
 
   headerRow: {
     flexDirection: 'row',

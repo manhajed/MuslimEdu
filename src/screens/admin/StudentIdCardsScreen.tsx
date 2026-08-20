@@ -13,6 +13,7 @@ import StudentIdCard, { CARD_THEMES, CardTheme } from '../../components/StudentI
 import UserAvatar from '../../components/UserAvatar';
 import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import GlassBackground from '../../components/glass/GlassBackground';
+import ScreenHeader from '../../components/ScreenHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, RADIUS, SHADOW, SPACING, BRAND } from '../../theme/glass';
 
@@ -222,22 +223,21 @@ export default function StudentIdCardsScreen() {
   return (
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-          <IconChevronLeft color={INK} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('student_id_cards.title', 'Student ID Cards')}</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity onPress={() => (navigation as any).navigate('IdCardTemplate')} hitSlop={10} style={styles.headerIconBtn}>
-            <IconImage color={INK} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={toggleSelectMode} hitSlop={10}>
-            <Text style={styles.selectToggleText}>
-              {isSelectMode ? t('common.cancel', 'Cancel') : t('student_id_cards.select', 'Select')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ScreenHeader
+        title={t('student_id_cards.title', 'Student ID Cards')}
+        rightAction={
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={() => (navigation as any).navigate('IdCardTemplate')} hitSlop={10} style={styles.headerIconBtn}>
+              <IconImage color={INK} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={toggleSelectMode} hitSlop={10}>
+              <Text style={styles.selectToggleText}>
+                {isSelectMode ? t('common.cancel', 'Cancel') : t('student_id_cards.select', 'Select')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        }
+      />
 
       {isLoading ? (
         <View style={styles.listContent}>

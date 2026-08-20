@@ -1031,12 +1031,13 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
 
         {/* White body panel - rounded top edge rides up over the dark layer */}
         <View style={styles.body}>
-          <SyncStatusCard />
           {/* Visible read-only status for the platform subscription that
               gates gradingSystems/examCategories/gradebookReview below -
               previously those cards just locked silently with no way for
               the admin to see WHY (package, expiry, days left). Set by the
-              superadmin from SuperAdminSchoolSubscription. */}
+              superadmin from SuperAdminSchoolSubscription. Leads the stack
+              (its own dark/highlight card) since it's the more actionable
+              of the two - SyncStatusCard is a plainer status readout below it. */}
           <SubscriptionStatusCard
             status={subscriptionStatus}
             loadFailed={subscriptionStatusError}
@@ -1044,6 +1045,7 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
             onSubscribePress={() => (navigation as any).navigate('SubscribeRequest')}
             onDetailsPress={() => (navigation as any).navigate('SubscriptionDetails')}
           />
+          <SyncStatusCard />
           <Text style={styles.sectionLabel}>{t('admin_dashboard.manage_section', 'Manage')}</Text>
 
           {/* Live filter over the grouped lists below - hero/bento hide while
@@ -1253,7 +1255,10 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   scrollFlex: { flex: 1, zIndex: 1, elevation: 1 },
-  scrollContent: { paddingBottom: 40 },
+  // flexGrow (not a trailing paddingBottom) so the white body panel below
+  // can stretch into any leftover height - padding here would instead show
+  // as a strip of bare canvas between the panel's end and the tab bar.
+  scrollContent: { flexGrow: 1 },
 
   headerRow: {
     flexDirection: 'row',
@@ -1329,8 +1334,12 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     paddingHorizontal: 20,
     paddingTop: 26,
+    paddingBottom: 24,
     marginTop: 24,
-    minHeight: 520,
+    // Grows into whatever height the hero leaves over instead of a fixed
+    // floor, so the panel always reaches the bottom of the scroll view -
+    // short menus no longer end mid-screen with canvas showing beneath.
+    flexGrow: 1,
   },
   sectionLabel: {
     fontSize: 13,
