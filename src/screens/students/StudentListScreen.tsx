@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import { Calendar, Check, ChevronLeft, ChevronRight, Funnel, Layers, Plus, Search, TriangleAlert, X } from 'lucide-react-native';
+import { Check, ChevronLeft, ChevronRight, Funnel, Plus, Search, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchStudents, StudentSummary, ChildStatus } from '../../services/adminService';
@@ -23,6 +23,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
 import { isOrphanSchoolUser } from '../../utils/orphanSchool';
+import { Box } from '../../components/ui/box';
+import { HStack } from '../../components/ui/hstack';
+import { VStack } from '../../components/ui/vstack';
+import { Text as GSText } from '../../components/ui/text';
 const EMERALD = COLORS.emerald;
 const EMERALD_SOFT = COLORS.emeraldSoft;
 const INK = COLORS.ink;
@@ -62,15 +66,6 @@ function IconSearch({ color }: { color: string }) {
 }
 function IconFilter({ color }: { color: string }) {
   return <Funnel size={18} color={color} strokeWidth={2} />;
-}
-function IconCalendar({ color }: { color: string }) {
-  return <Calendar size={13} color={color} strokeWidth={2} />;
-}
-function IconLayers({ color }: { color: string }) {
-  return <Layers size={13} color={color} strokeWidth={2} />;
-}
-function IconAlertTriangle({ color }: { color: string }) {
-  return <TriangleAlert size={13} color={color} strokeWidth={2} />;
 }
 function IconClose({ color }: { color: string }) {
   return <X size={18} color={color} strokeWidth={2.2} />;
@@ -274,13 +269,13 @@ export default function StudentListScreen() {
       {isLoading ? (
         <View style={styles.listContent}>
           {[0, 1, 2, 3, 4].map((i) => (
-            <View key={i} style={styles.card}>
+            <Box key={i} className="flex-row items-center bg-background rounded-2xl border border-border p-4 mb-2.5">
               <SkeletonCircle size={44} style={{ marginRight: 12 }} />
               <View style={styles.cardBody}>
                 <Skeleton width="55%" height={14} style={{ marginBottom: 6 }} />
                 <Skeleton width="75%" height={11} />
               </View>
-            </View>
+            </Box>
           ))}
         </View>
       ) : error ? (
@@ -309,49 +304,55 @@ export default function StudentListScreen() {
           renderItem={({ item }) => {
             const status = item.status ?? 'active';
             const joined = formatJoined(item.joined_date);
+            // Was three separate colored chips - collapsed into the single
+            // plain subtitle line the reference card uses, with the
+            // unplaced-section warning as the only part that keeps its own
+            // color (everything else reads as one calm meta line).
+            const sectionText = item.section_name
+              ? [item.class_name, item.section_name].filter(Boolean).join(' - ') +
+                (item.room_number ? ` · ${t('student_list.room', 'Room')} ${item.room_number}` : '')
+              : null;
+            // Orphan schools have no class/section model at all - see
+            // isOrphanSchoolUser's doc comment - so the warning would fire
+            // for every single child there and mean nothing.
+            const showUnplacedWarning = !sectionText && !isOrphanSchool;
             return (
-              <TouchableOpacity
-                style={styles.card}
-                activeOpacity={0.75}
-                onPress={() => setActionChild(item)}
-              >
-                <UserAvatar
-                  name={item.name}
-                  photo={item.photo}
-                  size={44}
-                  ringColor={HAIRLINE}
-                  dotColor={STATUS_COLORS[status].dot}
-                />
-                <View style={styles.cardBody}>
-                  <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-                  <Text style={styles.meta} numberOfLines={1}>{item.email}</Text>
-                  <View style={styles.chipRow}>
-                    {item.section_name ? (
-                      <View style={styles.sectionChip}>
-                        <IconLayers color={EMERALD} />
-                        <Text style={styles.sectionChipText} numberOfLines={1}>
-                          {[item.class_name, item.section_name].filter(Boolean).join(' - ')}
-                          {item.room_number ? ` · ${t('student_list.room', 'Room')} ${item.room_number}` : ''}
-                        </Text>
-                      </View>
-                    ) : isOrphanSchool ? null : (
-                      // Orphan schools have no class/section model at all - see
-                      // isOrphanSchoolUser's doc comment - so this warning would
-                      // fire for every single child there and mean nothing.
-                      <View style={styles.warnChip}>
-                        <IconAlertTriangle color={AMBER} />
-                        <Text style={styles.warnChipText}>{t('student_list.not_enrolled', 'Not placed in a section')}</Text>
-                      </View>
-                    )}
-                    {joined ? (
-                      <View style={styles.joinedChip}>
-                        <IconCalendar color={EMERALD} />
-                        <Text style={styles.joinedChipText}>{t('student_list.joined', 'Joined {date}').replace('{date}', joined)}</Text>
-                      </View>
+              <TouchableOpacity activeOpacity={0.75} onPress={() => setActionChild(item)}>
+                <HStack space="md" className="items-center bg-background rounded-2xl border border-border p-4 mb-2.5">
+                  <UserAvatar
+                    name={item.name}
+                    photo={item.photo}
+                    size={44}
+                    ringColor={HAIRLINE}
+                    dotColor={STATUS_COLORS[status].dot}
+                  />
+                  <VStack className="flex-1">
+                    <GSText className="text-foreground text-[15.5px] font-bold" numberOfLines={1}>
+                      {item.name}
+                    </GSText>
+                    <GSText className="text-muted-foreground text-xs mt-0.5" numberOfLines={1}>
+                      {item.email}
+                    </GSText>
+                    {sectionText || showUnplacedWarning || joined ? (
+                      <GSText className="text-xs mt-1" numberOfLines={1}>
+                        {sectionText ? (
+                          <GSText className="text-muted-foreground">{sectionText}</GSText>
+                        ) : showUnplacedWarning ? (
+                          <GSText className="text-amber-600 font-semibold">
+                            {t('student_list.not_enrolled', 'Not placed in a section')}
+                          </GSText>
+                        ) : null}
+                        {joined ? (
+                          <GSText className="text-muted-foreground">
+                            {(sectionText || showUnplacedWarning) ? ' · ' : ''}
+                            {t('student_list.joined', 'Joined {date}').replace('{date}', joined)}
+                          </GSText>
+                        ) : null}
+                      </GSText>
                     ) : null}
-                  </View>
-                </View>
-                <IconChevronRight color="#C4C9CF" />
+                  </VStack>
+                  <IconChevronRight color="#C4C9CF" />
+                </HStack>
               </TouchableOpacity>
             );
           }}
@@ -438,55 +439,7 @@ const styles = StyleSheet.create({
   emptyText: { color: SUBTLE, fontSize: 15, textAlign: 'center' },
   listContent: { padding: 16, paddingBottom: 40 },
 
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 16,
-    marginBottom: 10,
-  ...SHADOW.level2,
-  },
   cardBody: { flex: 1, marginLeft: 12 },
-  name: { fontSize: 15.5, fontWeight: '700', color: INK },
-  meta: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 7 },
-  joinedChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: EMERALD_SOFT,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    gap: 5,
-  },
-  joinedChipText: { fontSize: 11.5, fontWeight: '600', color: EMERALD },
-  sectionChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: EMERALD_SOFT,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    gap: 5,
-    maxWidth: '100%',
-  },
-  sectionChipText: { fontSize: 11.5, fontWeight: '600', color: EMERALD, flexShrink: 1 },
-  warnChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: AMBER_SOFT,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    gap: 5,
-  },
-  warnChipText: { fontSize: 11.5, fontWeight: '600', color: AMBER },
 
   // --- Sheets (filter + profile) ---
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.4)', justifyContent: 'flex-end' },
