@@ -1,5 +1,5 @@
-import React, { useCallback, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import { Alert, Animated, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -157,6 +157,26 @@ export default function AccountSettingsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [options, setOptions] = useState<UserSettingsOptions | null>(null);
+  // Drives the header's parallax as the list scrolls beneath it - title
+  // block lifts + fades slightly faster than the actual scroll, and the
+  // header itself gains shadow depth, instead of a static pinned bar.
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const PARALLAX_RANGE = 60;
+  const titleTranslateY = scrollY.interpolate({
+    inputRange: [0, PARALLAX_RANGE],
+    outputRange: [0, -14],
+    extrapolate: 'clamp',
+  });
+  const subtitleOpacity = scrollY.interpolate({
+    inputRange: [0, PARALLAX_RANGE * 0.7],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+  const headerShadowOpacity = scrollY.interpolate({
+    inputRange: [0, PARALLAX_RANGE],
+    outputRange: [0.05, 0.16],
+    extrapolate: 'clamp',
+  });
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -207,17 +227,17 @@ export default function AccountSettingsScreen() {
   };
 
   const header = (
-    <View style={[styles.header, { paddingTop: insets.top }]}>
+    <Animated.View style={[styles.header, { paddingTop: insets.top, shadowOpacity: headerShadowOpacity }]}>
       <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={8}>
-        <IconChevronLeft color={BRAND.emeraldDeep} />
+        <IconChevronLeft color={INK} />
       </TouchableOpacity>
-      <View style={styles.headerText}>
+      <Animated.View style={[styles.headerText, { transform: [{ translateY: titleTranslateY }] }]}>
         <Text style={styles.headerTitle}>{t('account_settings.header_title', 'Account Settings')}</Text>
-        <Text style={styles.headerSub}>
+        <Animated.Text style={[styles.headerSub, { opacity: subtitleOpacity }]}>
           {t('account_settings.header_subtitle', 'Language, appearance, privacy and password')}
-        </Text>
-      </View>
-    </View>
+        </Animated.Text>
+      </Animated.View>
+    </Animated.View>
   );
 
   if (loading) {
@@ -250,7 +270,11 @@ export default function AccountSettingsScreen() {
   return (
     <View style={styles.flex}>
       {header}
-      <ScrollView contentContainerStyle={styles.content}>
+      <Animated.ScrollView
+        contentContainerStyle={styles.content}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
+        scrollEventThrottle={16}
+      >
         <SectionLabel title={t('account_settings.accessibility_section', 'Accessibility')} />
         <View style={styles.card}>
           <Row
@@ -389,7 +413,7 @@ export default function AccountSettingsScreen() {
           </View>
           <IconChevronRight color={SUBTLE} />
         </TouchableOpacity>
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }
@@ -414,7 +438,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
-  backBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: EMERALD_SOFT, marginRight: 12 },
+  backBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   headerText: { flex: 1 },
   headerTitle: { fontSize: 20, fontWeight: '800', color: INK },
   headerSub: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
