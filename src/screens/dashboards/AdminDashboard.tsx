@@ -1332,7 +1332,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 26,
     marginTop: 24,
-    minHeight: 520,
+    // Floor lowered from 520 now that the Log Out footer card no longer
+    // renders here (moved to Account Settings) - that 520 was sized to
+    // include it, and left a bare stretch of white below the last section
+    // once it was gone.
+    minHeight: 420,
   },
   sectionLabel: {
     fontSize: 13,
