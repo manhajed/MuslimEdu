@@ -45,9 +45,9 @@ export default function SubscriptionStatusCard({
     return (
       <TouchableOpacity style={styles.cardShadow} activeOpacity={onRetry ? 0.88 : 1} onPress={onRetry} disabled={!onRetry}>
         <LinearGradient colors={GRADIENT_BLACK} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
-          <View style={[styles.iconWrap, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
+          <LinearGradient colors={EMERALD_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.iconWrap, styles.iconGlow]}>
             <CreditCard size={20} color="#FFFFFF" strokeWidth={1.8} />
-          </View>
+          </LinearGradient>
           <View style={styles.textWrap}>
             <Text style={styles.title}>{t('subscription_card.load_failed_title', 'Subscription status unavailable')}</Text>
             <Text style={styles.subtitle}>
@@ -214,6 +214,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+  },
+  // Emerald glow behind the icon square - a colored shadow (not a plain
+  // black one) is what reads as "glow" rather than ordinary elevation.
+  iconGlow: {
+    shadowColor: COLORS.emerald,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.65,
+    shadowRadius: 10,
+    elevation: 8,
   },
   textWrap: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
