@@ -22,6 +22,10 @@ import AccountWizardSheet, { WizardStepDef, wizardFieldStyles } from '../../comp
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS, COLORS, RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import { Box } from '../../components/ui/box';
+import { HStack } from '../../components/ui/hstack';
+import { VStack } from '../../components/ui/vstack';
+import { Text as GSText } from '../../components/ui/text';
 const EMERALD = COLORS.emerald;
 const EMERALD_SOFT = COLORS.emeraldSoft;
 const INK = COLORS.ink;
@@ -63,6 +67,10 @@ function EmptyIcon() {
 }
 
 // --- Teacher row ---------------------------------------------------------
+// Same card language as StudentListScreen's redesign: bordered rounded
+// card, avatar, bold name, one plain-text subtitle line - the status pill
+// (dot + colored chip background) collapsed into colored text, same as
+// that screen's unplaced-section warning.
 const TeacherRow = React.memo(function TeacherRow({
   item,
   onPress,
@@ -71,34 +79,34 @@ const TeacherRow = React.memo(function TeacherRow({
   onPress: (item: TeacherOverview) => void;
 }) {
   const { t } = useLocale();
+  const statusText = item.submitted
+    ? item.submitted_by
+      ? t('admin_teacher_list.report_submitted_by', 'Report submitted · {name}').replace('{name}', item.submitted_by)
+      : t('admin_teacher_list.report_submitted', 'Report submitted')
+    : t('admin_teacher_list.missing_report', 'Missing report');
   return (
-    <TouchableOpacity style={styles.row} activeOpacity={0.85} onPress={() => onPress(item)}>
-      <UserAvatar
-        name={item.name}
-        photo={item.photo}
-        size={48}
-        ringColor={HAIRLINE}
-        dotColor={item.submitted ? EMERALD : DANGER}
-      />
-      <View style={[styles.flex1, { marginLeft: 14 }]}>
-        <Text style={styles.rowName} numberOfLines={1}>{item.name || t('admin_teacher_list.unnamed_teacher', 'Unnamed teacher')}</Text>
-        {item.submitted ? (
-          <View style={[styles.statusPill, styles.statusPillOk]}>
-            <View style={[styles.statusDot, { backgroundColor: EMERALD }]} />
-            <Text style={styles.statusPillTextOk} numberOfLines={1}>
-              {item.submitted_by
-                ? t('admin_teacher_list.report_submitted_by', 'Report submitted · {name}').replace('{name}', item.submitted_by)
-                : t('admin_teacher_list.report_submitted', 'Report submitted')}
-            </Text>
-          </View>
-        ) : (
-          <View style={[styles.statusPill, styles.statusPillMissing]}>
-            <View style={[styles.statusDot, { backgroundColor: DANGER }]} />
-            <Text style={styles.statusPillTextMissing}>{t('admin_teacher_list.missing_report', 'Missing report')}</Text>
-          </View>
-        )}
-      </View>
-      <ChevronRightIcon color="#C4C9CF" />
+    <TouchableOpacity activeOpacity={0.85} onPress={() => onPress(item)}>
+      <HStack space="md" className="items-center bg-background rounded-2xl border border-border p-4 mb-3">
+        <UserAvatar
+          name={item.name}
+          photo={item.photo}
+          size={48}
+          ringColor={HAIRLINE}
+          dotColor={item.submitted ? EMERALD : DANGER}
+        />
+        <VStack className="flex-1">
+          <GSText className="text-foreground text-[15.5px] font-bold" numberOfLines={1}>
+            {item.name || t('admin_teacher_list.unnamed_teacher', 'Unnamed teacher')}
+          </GSText>
+          <GSText
+            className={`text-xs mt-1 font-semibold ${item.submitted ? 'text-primary' : 'text-destructive'}`}
+            numberOfLines={1}
+          >
+            {statusText}
+          </GSText>
+        </VStack>
+        <ChevronRightIcon color="#C4C9CF" />
+      </HStack>
     </TouchableOpacity>
   );
 });
@@ -445,13 +453,13 @@ export default function AdminTeacherListScreen() {
       {isLoading ? (
         <View style={styles.listContent}>
           {[0, 1, 2, 3].map((i) => (
-            <View key={i} style={styles.row}>
+            <Box key={i} className="flex-row items-center bg-background rounded-2xl border border-border p-4 mb-3">
               <Skeleton width={44} height={44} borderRadius={22} />
               <View style={{ marginLeft: 12, flex: 1 }}>
                 <Skeleton width="60%" height={14} style={{ marginBottom: 6 }} />
                 <Skeleton width="40%" height={11} />
               </View>
-            </View>
+            </Box>
           ))}
         </View>
       ) : error ? (
@@ -544,33 +552,6 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 14.5, color: INK, padding: 0 },
 
   listContent: { padding: 16, paddingBottom: 40 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: GLASS_SURFACE,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: HAIRLINE,
-    padding: 16,
-    marginBottom: 12,
-  ...SHADOW.level2,
-  },
-  rowName: { fontSize: 15.5, fontWeight: '700', color: INK },
-  statusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderRadius: RADIUS.pill,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    marginTop: 6,
-    gap: 6,
-  },
-  statusPillOk: { backgroundColor: EMERALD_SOFT },
-  statusPillMissing: { backgroundColor: 'rgba(239,68,68,0.1)' },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusPillTextOk: { fontSize: 11.5, color: EMERALD, fontWeight: '700' },
-  statusPillTextMissing: { fontSize: 11.5, color: DANGER, fontWeight: '700' },
 
   emptyWrap: { alignItems: 'center', paddingTop: 50, paddingHorizontal: 30 },
   emptyTitle: { fontSize: 15.5, fontWeight: '700', color: INK, marginTop: 14 },
