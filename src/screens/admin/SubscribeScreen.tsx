@@ -211,7 +211,7 @@ export default function SubscribeScreen() {
                   >
                     <View style={styles.packageHeaderRow}>
                       <View style={styles.packageIconWrap}>
-                        <PlanIcon size={20} color={INK} strokeWidth={1.8} />
+                        <PlanIcon size={20} color="#FFFFFF" strokeWidth={1.8} />
                       </View>
                       <Text style={styles.packageName} numberOfLines={1}>
                         {pkg.name}
@@ -324,12 +324,13 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 12,
   },
+  // Solid black, same treatment as the now-black checkbox indicator, rather
+  // than a bordered white square with a black glyph.
   packageIconWrap: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: HAIRLINE,
+    backgroundColor: INK,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -343,7 +344,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkboxChecked: { backgroundColor: EMERALD, borderColor: EMERALD },
+  checkboxChecked: { backgroundColor: INK, borderColor: INK },
   packageDivider: { height: 1, backgroundColor: HAIRLINE },
   packageBody: { padding: 16 },
   intervalPill: {
