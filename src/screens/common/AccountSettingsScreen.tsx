@@ -157,24 +157,15 @@ export default function AccountSettingsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [options, setOptions] = useState<UserSettingsOptions | null>(null);
-  // Drives the header's parallax as the list scrolls beneath it - title
-  // block lifts + fades slightly faster than the actual scroll, and the
-  // header itself gains shadow depth, instead of a static pinned bar.
+  // Drives the header's parallax as the list scrolls beneath it - the
+  // subtitle fades out over the first ~40px of scroll. (An earlier version
+  // also translateY'd the title, which threw off the back button's
+  // alignment against it since the row's height stayed put while the
+  // title visually drifted out of it - dropped in favor of just the fade.)
   const scrollY = useRef(new Animated.Value(0)).current;
-  const PARALLAX_RANGE = 60;
-  const titleTranslateY = scrollY.interpolate({
-    inputRange: [0, PARALLAX_RANGE],
-    outputRange: [0, -14],
-    extrapolate: 'clamp',
-  });
   const subtitleOpacity = scrollY.interpolate({
-    inputRange: [0, PARALLAX_RANGE * 0.7],
+    inputRange: [0, 40],
     outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-  const headerShadowOpacity = scrollY.interpolate({
-    inputRange: [0, PARALLAX_RANGE],
-    outputRange: [0.05, 0.16],
     extrapolate: 'clamp',
   });
 
@@ -227,17 +218,17 @@ export default function AccountSettingsScreen() {
   };
 
   const header = (
-    <Animated.View style={[styles.header, { paddingTop: insets.top, shadowOpacity: headerShadowOpacity }]}>
+    <View style={[styles.header, { paddingTop: insets.top }]}>
       <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={8}>
         <IconChevronLeft color={INK} />
       </TouchableOpacity>
-      <Animated.View style={[styles.headerText, { transform: [{ translateY: titleTranslateY }] }]}>
+      <View style={styles.headerText}>
         <Text style={styles.headerTitle}>{t('account_settings.header_title', 'Account Settings')}</Text>
         <Animated.Text style={[styles.headerSub, { opacity: subtitleOpacity }]}>
           {t('account_settings.header_subtitle', 'Language, appearance, privacy and password')}
         </Animated.Text>
-      </Animated.View>
-    </Animated.View>
+      </View>
+    </View>
   );
 
   if (loading) {
@@ -426,17 +417,13 @@ const styles = StyleSheet.create({
   retryBtn: { marginTop: 20, backgroundColor: BRAND.emeraldDeep, paddingHorizontal: 26, paddingVertical: 12, borderRadius: 999 },
   retryText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
 
+  // Transparent - sits directly on the canvas instead of a separate white
+  // bar, so nothing changes about it as the list scrolls underneath.
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#0B1F14',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 3,
   },
   backBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   headerText: { flex: 1 },
