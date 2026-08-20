@@ -21,11 +21,9 @@ import { QueuedAction, QueuedActionKind } from '../../services/offlineQueue';
  * AdminDashboard and TeacherDashboard, since both roles' data flows feed
  * into the same underlying caches/queue.
  *
- * Each dataset/action kind gets its own tinted card - a wayfinding color per
- * category (Students blue, School Branding gold, Fees emerald, etc.) rather
- * than every "downloaded" row sharing one accent tint and every "pending"
- * row sharing one danger tint. The tint is a fixed lookup, not derived from
- * the accent, so it stays legible in both themes without recomputing.
+ * Monochrome list - every row is a plain surface card with a black glyph,
+ * no per-category tint. Wayfinding by color was dropped in favor of a
+ * flatter, single-ink look.
  */
 
 const ACTION_LABELS: Record<QueuedActionKind, string> = {
@@ -39,69 +37,7 @@ const ACTION_LABELS: Record<QueuedActionKind, string> = {
   admin_document_reject: 'Document Rejected',
 };
 
-// A named palette (not "the accent at different opacities") so each card
-// reads as its own category at a glance - same reasoning as the admin
-// menu's per-row icon tints. Kept local to this screen; nothing here is the
-// app's brand accent (that stays theme.accent/theme.success elsewhere).
-const TINT = {
-  blue: '#0A84FF',
-  indigo: '#5E5CE6',
-  teal: '#2FA9B8',
-  orange: '#FF9F0A',
-  pink: '#FF3B72',
-  purple: '#BF5AF2',
-  gray: '#8E8E93',
-  gold: '#D4A64A',
-  emerald: '#1FAE64',
-} as const;
-type Tint = keyof typeof TINT;
-
-// Download/upload glyphs read as black against every tint square (was
-// white) - the tint itself still carries the wayfinding, the glyph doesn't
-// need to fight it for attention.
 const ICON_INK = '#111827';
-
-// Every prefix scanCachedDatasets can return (see utils/syncStatus.ts) -
-// grouped by what kind of data it is, not by which role sees it.
-const DATASET_TINTS: Record<string, Tint> = {
-  '@students_cache_v1': 'blue',
-  '@student_enrollment_status_cache_v1': 'teal',
-  '@attendance_roster_cache_v1': 'indigo',
-  '@school_branding_cache_v1': 'gold',
-  '@my_schedule_cache_v1': 'indigo',
-  '@student_academic_cache_v1': 'purple',
-  '@student_progress_cache_v1': 'emerald',
-  '@student_identity_cache_v1': 'purple',
-  '@student_portal_cache_v1': 'blue',
-  '@announcement_cache_v1': 'orange',
-  '@chat_cache_v1': 'blue',
-  '@post_cache_v1': 'pink',
-  '@material_cache_v1': 'teal',
-  '@examination_cache_v1': 'purple',
-  '@assessment_cache_v1': 'purple',
-  '@fee_cache_v1': 'gold',
-  '@academic_calendar_cache_v1': 'indigo',
-  '@memorization_cache_v1': 'emerald',
-  '@behavior_cache_v1': 'orange',
-  '@teacher_class_cache_v1': 'blue',
-  '@teacher_gradebook_cache_v1': 'purple',
-  '@teacher_student_progress_cache_v1': 'teal',
-  '@teacher_orphan_cache_v1': 'pink',
-  '@orphan_cache_v1': 'pink',
-  '@lesson_plan_cache_v1': 'teal',
-  '@student_document_upload_cache_v1': 'gray',
-};
-
-const PENDING_TINTS: Partial<Record<QueuedActionKind, Tint>> = {
-  orphan_report_submit: 'pink',
-  teacher_orphan_report_submit: 'pink',
-  attendance_submit: 'indigo',
-  attendance_scan: 'teal',
-  examination_save: 'purple',
-  examination_results_save: 'purple',
-  admin_document_issue: 'blue',
-  admin_document_reject: 'orange',
-};
 
 function IconChevronLeft({ color }: { color: string }) {
   return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
@@ -176,9 +112,9 @@ export default function SyncStatusScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <View style={[styles.connectionBanner, { backgroundColor: isOnline ? theme.successSoft : theme.dangerSoft }]}>
-        <View style={[styles.connectionDot, { backgroundColor: isOnline ? theme.success : theme.danger }]} />
-        <Text style={[styles.connectionText, { color: isOnline ? theme.success : theme.danger }]}>
+      <View style={styles.connectionBanner}>
+        <View style={[styles.connectionDot, { backgroundColor: ICON_INK }]} />
+        <Text style={styles.connectionText}>
           {isOnline ? t('sync_status.online', 'Online') : t('sync_status.offline', 'Offline')}
         </Text>
         {actions.length > 0 ? (
@@ -204,10 +140,9 @@ export default function SyncStatusScreen() {
           <>
             <View style={{ gap: 10 }}>
               {datasets.map((d) => {
-                const tint = TINT[DATASET_TINTS[d.key] ?? 'emerald'];
                 return (
                   <View key={d.key} style={styles.itemCard}>
-                    <View style={[styles.itemIconWrap, { backgroundColor: tint }]}>
+                    <View style={styles.itemIconWrap}>
                       <IconDownload color={ICON_INK} />
                     </View>
                     <View style={styles.itemTextWrap}>
@@ -218,7 +153,7 @@ export default function SyncStatusScreen() {
                           : formatBytes(d.bytes)}
                       </Text>
                     </View>
-                    <IconCheck color={tint} />
+                    <IconCheck color={ICON_INK} />
                   </View>
                 );
               })}
@@ -242,10 +177,9 @@ export default function SyncStatusScreen() {
           <View style={{ gap: 10 }}>
             {pendingByKind.map(([kind, list]) => {
               const hasError = list.some((a) => a.lastError);
-              const tint = hasError ? theme.danger : TINT[PENDING_TINTS[kind] ?? 'gray'];
               return (
                 <View key={kind} style={styles.itemCard}>
-                  <View style={[styles.itemIconWrap, { backgroundColor: tint }]}>
+                  <View style={styles.itemIconWrap}>
                     <IconUpload color={ICON_INK} />
                   </View>
                   <View style={styles.itemTextWrap}>
@@ -293,6 +227,8 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     // Fully-rounded pill, not just a rounded rectangle - the app's own
     // "state" affordance elsewhere (status pills on SubscriptionStatusCard,
     // badges) is always a true pill; this banner is the same idea scaled up.
+    // No tinted fill (monochrome pass) - a hairline border keeps it legible
+    // as its own row on the canvas background.
     connectionBanner: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -301,9 +237,12 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       paddingVertical: 12,
       paddingHorizontal: 16,
       borderRadius: RADIUS.pill,
+      backgroundColor: theme.surface,
+      borderWidth: 1,
+      borderColor: theme.border,
     },
     connectionDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-    connectionText: { fontSize: 14, fontWeight: '700', flex: 1 },
+    connectionText: { fontSize: 14, fontWeight: '700', flex: 1, color: ICON_INK },
     syncNowBtn: { backgroundColor: theme.accent, borderRadius: RADIUS.pill, paddingHorizontal: 14, paddingVertical: 7, minWidth: 80, alignItems: 'center' },
     syncNowText: { fontSize: 12, fontWeight: '700', color: theme.onAccent },
 
