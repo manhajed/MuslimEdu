@@ -1,14 +1,15 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  Animated,
   TouchableOpacity,
   RefreshControl,
   TextInput,
   Platform,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { Check, ChevronLeft, ChevronRight, Funnel, Plus, Search, X } from 'lucide-react-native';
@@ -20,8 +21,7 @@ import UserAvatar from '../../components/UserAvatar';
 import { ChildActionModal, ChildProfileSheet } from '../../components/ChildProfileSheet';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
-import GlassBackground from '../../components/glass/GlassBackground';
+import { BRAND, COLORS, RADIUS, SHADOW } from '../../theme/glass';
 import { isOrphanSchoolUser } from '../../utils/orphanSchool';
 import { Box } from '../../components/ui/box';
 import { HStack } from '../../components/ui/hstack';
@@ -37,12 +37,33 @@ const DANGER = COLORS.danger;
 const DANGER_SOFT = 'rgba(239,68,68,0.12)';
 const AMBER = '#D97706';
 const AMBER_SOFT = 'rgba(217,119,6,0.12)';
+const WHITE = '#FFFFFF';
+const HERO_GLASS_BG = 'rgba(255,255,255,0.16)';
+const HERO_GLASS_BORDER = 'rgba(255,255,255,0.28)';
 
 const STATUS_COLORS: Record<ChildStatus, { dot: string; chipBg: string; chipText: string; label: string }> = {
   active: { dot: EMERALD, chipBg: EMERALD_SOFT, chipText: EMERALD, label: 'Active' },
   pending: { dot: AMBER, chipBg: AMBER_SOFT, chipText: AMBER, label: 'Pending' },
   inactive: { dot: DANGER, chipBg: DANGER_SOFT, chipText: DANGER, label: 'Inactive' },
 };
+
+// Deterministic color per class/section name - same section always gets
+// the same color across the list (and across screens, teacher list uses
+// the same palette+hash), rather than a random assignment on every render.
+const SECTION_PALETTE = ['#0A84FF', '#8B5CF6', '#FF6B81', '#0EA5E9', '#D4A64A', '#FF9F0A'];
+function colorForKey(key: string): string {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  return SECTION_PALETTE[hash % SECTION_PALETTE.length];
+}
+
+// The parallax hero (header + search) is a separate Animated layer behind
+// the list, same technique as PrayerTimesDetailScreen: it travels at half
+// scroll speed and fades to nothing, while the header/search content -
+// inside the FlatList's own ListHeaderComponent - scrolls away at normal
+// speed on top of it.
+const HERO_HEIGHT = 150;
+const PARALLAX_FACTOR = 0.5;
 
 function formatJoined(dateStr?: string | null): string | null {
   if (!dateStr) return null;
@@ -227,12 +248,25 @@ export default function StudentListScreen() {
     });
   };
 
-  return (
-    <View style={styles.flex}>
-      <GlassBackground variant="canvas" />
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const [heroHeight, setHeroHeight] = useState(HERO_HEIGHT);
+
+  const bgTranslateY = scrollY.interpolate({
+    inputRange: [0, heroHeight],
+    outputRange: [0, -heroHeight * PARALLAX_FACTOR],
+    extrapolate: 'clamp',
+  });
+  const bgOpacity = scrollY.interpolate({
+    inputRange: [0, heroHeight * 0.6, heroHeight],
+    outputRange: [1, 1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const listHeader = (
+    <View onLayout={(e) => setHeroHeight(e.nativeEvent.layout.height)}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={10}>
-          <IconChevronLeft color={EMERALD} />
+          <IconChevronLeft color={WHITE} />
           <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
         <Text style={styles.title}>{title}</Text>
@@ -249,7 +283,7 @@ export default function StudentListScreen() {
             onPress={() => setFilterSheetOpen(true)}
             hitSlop={8}
           >
-            <IconFilter color={isFilterActive ? '#FFFFFF' : EMERALD} />
+            <IconFilter color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </View>
@@ -265,43 +299,75 @@ export default function StudentListScreen() {
           autoCorrect={false}
         />
       </View>
+    </View>
+  );
+
+  return (
+    <View style={styles.flex}>
+      <Animated.View
+        style={[
+          styles.bgLayer,
+          { height: heroHeight, transform: [{ translateY: bgTranslateY }], opacity: bgOpacity },
+        ]}
+      >
+        <LinearGradient
+          colors={[BRAND.emerald, BRAND.emeraldDeep]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
 
       {isLoading ? (
-        <View style={styles.listContent}>
-          {[0, 1, 2, 3, 4].map((i) => (
-            <Box key={i} className="flex-row items-center bg-background rounded-2xl border border-border p-4 mb-2.5">
-              <SkeletonCircle size={44} style={{ marginRight: 12 }} />
-              <View style={styles.cardBody}>
-                <Skeleton width="55%" height={14} style={{ marginBottom: 6 }} />
-                <Skeleton width="75%" height={11} />
-              </View>
-            </Box>
-          ))}
+        <View style={styles.flex1}>
+          {listHeader}
+          <View style={styles.listContent}>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <Box key={i} className="flex-row items-center bg-background rounded-xl border border-border p-3 mb-2">
+                <SkeletonCircle size={44} style={{ marginRight: 12 }} />
+                <View style={styles.cardBody}>
+                  <Skeleton width="55%" height={14} style={{ marginBottom: 6 }} />
+                  <Skeleton width="75%" height={11} />
+                </View>
+              </Box>
+            ))}
+          </View>
         </View>
       ) : error ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={load} style={styles.retryButton}>
-            <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
-          </TouchableOpacity>
+        <View style={styles.flex1}>
+          {listHeader}
+          <View style={styles.center}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity onPress={load} style={styles.retryButton}>
+              <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       ) : filtered.length === 0 ? (
-        <View style={styles.center}>
-          <Text style={styles.emptyText}>
-            {students.length === 0
-              ? t('student_list.empty_none', 'No {title} found.').replace('{title}', title.toLowerCase())
-              : t('student_list.empty_no_matches', 'No matches for your search.')}
-          </Text>
+        <View style={styles.flex1}>
+          {listHeader}
+          <View style={styles.center}>
+            <Text style={styles.emptyText}>
+              {students.length === 0
+                ? t('student_list.empty_none', 'No {title} found.').replace('{title}', title.toLowerCase())
+                : t('student_list.empty_no_matches', 'No matches for your search.')}
+            </Text>
+          </View>
         </View>
       ) : (
-        <FlatList
+        <Animated.FlatList
           data={filtered}
-          keyExtractor={(item) => String(item.id)}
+          keyExtractor={(item: StudentSummary) => String(item.id)}
           contentContainerStyle={styles.listContent}
+          ListHeaderComponent={listHeader}
+          onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+            useNativeDriver: true,
+          })}
+          scrollEventThrottle={16}
           refreshControl={
             <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={EMERALD} />
           }
-          renderItem={({ item }) => {
+          renderItem={({ item }: { item: StudentSummary }) => {
             const status = item.status ?? 'active';
             const joined = formatJoined(item.joined_date);
             // Was three separate colored chips - collapsed into the single
@@ -316,18 +382,29 @@ export default function StudentListScreen() {
             // isOrphanSchoolUser's doc comment - so the warning would fire
             // for every single child there and mean nothing.
             const showUnplacedWarning = !sectionText && !isOrphanSchool;
+            const sectionKey = item.section_name ?? item.class_name ?? null;
+            const accentColor = sectionKey ? colorForKey(sectionKey) : AMBER;
             return (
               <TouchableOpacity activeOpacity={0.75} onPress={() => setActionChild(item)}>
-                <HStack space="md" className="items-center bg-background rounded-2xl border border-border p-4 mb-2.5">
+                <HStack
+                  space="md"
+                  className="items-center rounded-xl border p-3 mb-2"
+                  style={{
+                    backgroundColor: `${accentColor}14`,
+                    borderColor: `${accentColor}33`,
+                    borderLeftWidth: 3,
+                    borderLeftColor: accentColor,
+                  }}
+                >
                   <UserAvatar
                     name={item.name}
                     photo={item.photo}
-                    size={44}
+                    size={40}
                     ringColor={HAIRLINE}
                     dotColor={STATUS_COLORS[status].dot}
                   />
                   <VStack className="flex-1">
-                    <GSText className="text-foreground text-[15.5px] font-bold" numberOfLines={1}>
+                    <GSText className="text-foreground text-[15px] font-bold" numberOfLines={1}>
                       {item.name}
                     </GSText>
                     <GSText className="text-muted-foreground text-xs mt-0.5" numberOfLines={1}>
@@ -336,7 +413,7 @@ export default function StudentListScreen() {
                     {sectionText || showUnplacedWarning || joined ? (
                       <GSText className="text-xs mt-1" numberOfLines={1}>
                         {sectionText ? (
-                          <GSText className="text-muted-foreground">{sectionText}</GSText>
+                          <GSText className="font-semibold" style={{ color: accentColor }}>{sectionText}</GSText>
                         ) : showUnplacedWarning ? (
                           <GSText className="text-amber-600 font-semibold">
                             {t('student_list.not_enrolled', 'Not placed in a section')}
@@ -385,20 +462,25 @@ export default function StudentListScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: 'transparent' },
+  flex: { flex: 1, backgroundColor: CANVAS },
   flex1: { flex: 1 },
+  bgLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    overflow: 'hidden',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   backBtn: { flexDirection: 'row', alignItems: 'center', minWidth: 64 },
-  backText: { color: EMERALD, fontSize: 15, fontWeight: '600', marginLeft: 2 },
-  title: { fontSize: 18, fontWeight: '700', color: INK },
+  backText: { color: WHITE, fontSize: 15, fontWeight: '600', marginLeft: 2 },
+  title: { fontSize: 18, fontWeight: '700', color: WHITE },
   headerRightRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   addBtn: {
     width: 38,
@@ -406,7 +488,9 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: EMERALD,
+    backgroundColor: HERO_GLASS_BG,
+    borderWidth: 1,
+    borderColor: HERO_GLASS_BORDER,
   },
   filterBtn: {
     width: 38,
@@ -414,17 +498,19 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: EMERALD_SOFT,
+    backgroundColor: HERO_GLASS_BG,
+    borderWidth: 1,
+    borderColor: HERO_GLASS_BORDER,
   },
-  filterBtnActive: { backgroundColor: EMERALD },
+  filterBtnActive: { backgroundColor: 'rgba(255,255,255,0.34)' },
 
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#FFFFFF',
     borderRadius: RADIUS.pill,
     marginHorizontal: 16,
-    marginTop: 14,
+    marginBottom: 14,
     paddingHorizontal: 16,
     height: 46,
     gap: 10,
@@ -437,7 +523,7 @@ const styles = StyleSheet.create({
   retryButton: { backgroundColor: '#F2F2F7', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
   retryText: { color: INK, fontWeight: '600' },
   emptyText: { color: SUBTLE, fontSize: 15, textAlign: 'center' },
-  listContent: { padding: 16, paddingBottom: 40 },
+  listContent: { paddingHorizontal: 12, paddingBottom: 40 },
 
   cardBody: { flex: 1, marginLeft: 12 },
 

@@ -1,14 +1,15 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  Animated,
   TouchableOpacity,
   RefreshControl,
   TextInput,
   Alert,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, ChevronRight, FileText, IdCard, Plus, Search, UserRound, X } from 'lucide-react-native';
@@ -20,8 +21,7 @@ import UserAvatar from '../../components/UserAvatar';
 import AccountWizardSheet, { WizardStepDef, wizardFieldStyles } from '../../components/wizard/AccountWizardSheet';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SHADOW, GLASS, COLORS, RADIUS } from '../../theme/glass';
-import GlassBackground from '../../components/glass/GlassBackground';
+import { SHADOW, GLASS, BRAND, COLORS, RADIUS } from '../../theme/glass';
 import { Box } from '../../components/ui/box';
 import { HStack } from '../../components/ui/hstack';
 import { VStack } from '../../components/ui/vstack';
@@ -36,6 +36,21 @@ const GLASS_SURFACE = GLASS.fillOnLight;
 const GLASS_SURFACE_STRONG = GLASS.fillOnLightStrong;
 const GLASS_BORDER = GLASS.borderOnLight;
 const DANGER = COLORS.danger;
+const WHITE = '#FFFFFF';
+const HERO_GLASS_BG = 'rgba(255,255,255,0.16)';
+const HERO_GLASS_BORDER = 'rgba(255,255,255,0.28)';
+
+// No section/department field exists on TeacherOverview, so the "section"
+// color-coding here is by report status instead (submitted vs missing) -
+// the only per-teacher category this screen actually has.
+const STATUS_ACCENT = { submitted: EMERALD, missing: DANGER };
+
+// Same parallax hero technique as StudentListScreen / PrayerTimesDetailScreen:
+// a separate Animated background layer travels at half scroll speed and
+// fades out, while the header/search - inside the FlatList's own
+// ListHeaderComponent - scrolls away at normal speed on top of it.
+const HERO_HEIGHT = 150;
+const PARALLAX_FACTOR = 0.5;
 
 // --- Icons (matches the app's existing inline-SVG icon style) ---
 function ChevronLeftIcon({ color }: { color: string }) {
@@ -84,22 +99,33 @@ const TeacherRow = React.memo(function TeacherRow({
       ? t('admin_teacher_list.report_submitted_by', 'Report submitted · {name}').replace('{name}', item.submitted_by)
       : t('admin_teacher_list.report_submitted', 'Report submitted')
     : t('admin_teacher_list.missing_report', 'Missing report');
+  const accentColor = item.submitted ? STATUS_ACCENT.submitted : STATUS_ACCENT.missing;
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={() => onPress(item)}>
-      <HStack space="md" className="items-center bg-background rounded-2xl border border-border p-4 mb-3">
+      <HStack
+        space="md"
+        className="items-center rounded-xl border p-3 mb-2"
+        style={{
+          backgroundColor: `${accentColor}14`,
+          borderColor: `${accentColor}33`,
+          borderLeftWidth: 3,
+          borderLeftColor: accentColor,
+        }}
+      >
         <UserAvatar
           name={item.name}
           photo={item.photo}
-          size={48}
+          size={40}
           ringColor={HAIRLINE}
-          dotColor={item.submitted ? EMERALD : DANGER}
+          dotColor={accentColor}
         />
         <VStack className="flex-1">
-          <GSText className="text-foreground text-[15.5px] font-bold" numberOfLines={1}>
+          <GSText className="text-foreground text-[15px] font-bold" numberOfLines={1}>
             {item.name || t('admin_teacher_list.unnamed_teacher', 'Unnamed teacher')}
           </GSText>
           <GSText
-            className={`text-xs mt-1 font-semibold ${item.submitted ? 'text-primary' : 'text-destructive'}`}
+            className="text-xs mt-1 font-semibold"
+            style={{ color: accentColor }}
             numberOfLines={1}
           >
             {statusText}
@@ -423,12 +449,25 @@ export default function AdminTeacherListScreen() {
     });
   };
 
-  return (
-    <View style={styles.flex}>
-      <GlassBackground variant="canvas" />
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const [heroHeight, setHeroHeight] = useState(HERO_HEIGHT);
+
+  const bgTranslateY = scrollY.interpolate({
+    inputRange: [0, heroHeight],
+    outputRange: [0, -heroHeight * PARALLAX_FACTOR],
+    extrapolate: 'clamp',
+  });
+  const bgOpacity = scrollY.interpolate({
+    inputRange: [0, heroHeight * 0.6, heroHeight],
+    outputRange: [1, 1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const listHeader = (
+    <View onLayout={(e) => setHeroHeight(e.nativeEvent.layout.height)}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={10}>
-          <ChevronLeftIcon color={EMERALD} />
+          <ChevronLeftIcon color={WHITE} />
           <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
@@ -449,33 +488,62 @@ export default function AdminTeacherListScreen() {
           onChangeText={setQuery}
         />
       </View>
+    </View>
+  );
+
+  return (
+    <View style={styles.flex}>
+      <Animated.View
+        style={[
+          styles.bgLayer,
+          { height: heroHeight, transform: [{ translateY: bgTranslateY }], opacity: bgOpacity },
+        ]}
+      >
+        <LinearGradient
+          colors={[BRAND.emerald, BRAND.emeraldDeep]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
 
       {isLoading ? (
-        <View style={styles.listContent}>
-          {[0, 1, 2, 3].map((i) => (
-            <Box key={i} className="flex-row items-center bg-background rounded-2xl border border-border p-4 mb-3">
-              <Skeleton width={44} height={44} borderRadius={22} />
-              <View style={{ marginLeft: 12, flex: 1 }}>
-                <Skeleton width="60%" height={14} style={{ marginBottom: 6 }} />
-                <Skeleton width="40%" height={11} />
-              </View>
-            </Box>
-          ))}
+        <View style={styles.flex1}>
+          {listHeader}
+          <View style={styles.listContent}>
+            {[0, 1, 2, 3].map((i) => (
+              <Box key={i} className="flex-row items-center bg-background rounded-xl border border-border p-3 mb-2">
+                <Skeleton width={40} height={40} borderRadius={20} />
+                <View style={{ marginLeft: 12, flex: 1 }}>
+                  <Skeleton width="60%" height={14} style={{ marginBottom: 6 }} />
+                  <Skeleton width="40%" height={11} />
+                </View>
+              </Box>
+            ))}
+          </View>
         </View>
       ) : error ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={load} style={styles.retryButton}>
-            <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
-          </TouchableOpacity>
+        <View style={styles.flex1}>
+          {listHeader}
+          <View style={styles.center}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity onPress={load} style={styles.retryButton}>
+              <Text style={styles.retryText}>{t('common.try_again', 'Try again')}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       ) : (
-        <FlatList
+        <Animated.FlatList
           data={filtered}
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.listContent}
+          ListHeaderComponent={listHeader}
+          onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+            useNativeDriver: true,
+          })}
+          scrollEventThrottle={16}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
-          renderItem={({ item }) => <TeacherRow item={item} onPress={setSelectedTeacher} />}
+          renderItem={({ item }: { item: TeacherOverview }) => <TeacherRow item={item} onPress={setSelectedTeacher} />}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <EmptyIcon />
@@ -505,29 +573,35 @@ export default function AdminTeacherListScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: 'transparent' },
+  flex: { flex: 1, backgroundColor: CANVAS },
   flex1: { flex: 1 },
+  bgLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    overflow: 'hidden',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingBottom: 14,
-    backgroundColor: GLASS_SURFACE,
-    borderBottomWidth: 1,
-    borderBottomColor: GLASS_BORDER,
   },
   backBtn: { flexDirection: 'row', alignItems: 'center', minWidth: 72 },
-  backText: { color: EMERALD, fontSize: 16, fontWeight: '600', marginLeft: 2 },
+  backText: { color: WHITE, fontSize: 16, fontWeight: '600', marginLeft: 2 },
   headerTitleWrap: { alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: INK },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: WHITE },
   addBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: EMERALD,
+    backgroundColor: HERO_GLASS_BG,
+    borderWidth: 1,
+    borderColor: HERO_GLASS_BORDER,
   },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   errorText: { color: DANGER, textAlign: 'center', marginBottom: 12 },
@@ -537,21 +611,18 @@ const styles = StyleSheet.create({
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: GLASS_SURFACE,
+    backgroundColor: '#FFFFFF',
     borderRadius: RADIUS.pill,
-    borderWidth: 1,
-    borderColor: HAIRLINE,
     paddingHorizontal: 16,
     height: 48,
     gap: 10,
     marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 6,
+    marginBottom: 14,
   ...SHADOW.level1,
   },
   searchInput: { flex: 1, fontSize: 14.5, color: INK, padding: 0 },
 
-  listContent: { padding: 16, paddingBottom: 40 },
+  listContent: { paddingHorizontal: 12, paddingBottom: 40 },
 
   emptyWrap: { alignItems: 'center', paddingTop: 50, paddingHorizontal: 30 },
   emptyTitle: { fontSize: 15.5, fontWeight: '700', color: INK, marginTop: 14 },
