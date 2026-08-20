@@ -28,7 +28,6 @@ import { preparePostPhoto, InvalidPhotoTypeError } from '../utils/imagePrep';
 import { submitSchoolRegistration, SchoolRegistrationInput } from '../services/schoolRegistrationService';
 import {
   WizardGradientButton as GradientButton,
-  WizardStepHeader,
   WizardFieldLabel as FieldLabel,
   CheckCircleIcon,
   form,
@@ -502,13 +501,23 @@ export default function SchoolRegistrationScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => (step === 1 ? navigation.goBack() : goBackStep())} hitSlop={10}>
           <BackIcon />
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>{t('school_registration.title', 'Register Your School')}</Text>
-          <Text style={styles.headerSubtitle}>{t('school_registration.subtitle', 'A few steps to get your institution set up')}</Text>
-        </View>
       </View>
 
-      <WizardStepHeader step={step} labels={STEP_LABELS} />
+      <View style={styles.titleBlock}>
+        <Text style={styles.headerTitle}>{t('school_registration.title', 'Register Your School')}</Text>
+        <Text style={styles.stepCaption}>
+          {t('school_registration.step_caption', 'Step {current} of {total}: {label}')
+            .replace('{current}', String(step))
+            .replace('{total}', String(STEP_LABELS.length))
+            .replace('{label}', STEP_LABELS[step - 1])}
+        </Text>
+      </View>
+
+      <View style={styles.progressTrack}>
+        {STEP_LABELS.map((label, i) => (
+          <View key={label} style={[styles.progressSegment, i < step && styles.progressSegmentActive]} />
+        ))}
+      </View>
 
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={100}>
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
@@ -527,7 +536,7 @@ export default function SchoolRegistrationScreen() {
             <>
               <FieldLabel required>{t('school_registration.school_name', 'School Name')}</FieldLabel>
               <TextInput
-                style={form.input}
+                style={pill.input}
                 value={schoolName}
                 onChangeText={setSchoolName}
                 placeholder={t('school_registration.school_name_placeholder', "e.g. Al-Noor Islamic Academy")}
@@ -536,7 +545,7 @@ export default function SchoolRegistrationScreen() {
 
               <FieldLabel>{t('school_registration.school_address', 'Address')}</FieldLabel>
               <TextInput
-                style={[form.input, form.inputMultiline]}
+                style={[pill.input, pill.inputMultiline]}
                 value={schoolAddress}
                 onChangeText={setSchoolAddress}
                 placeholder={t('school_registration.school_address_placeholder', 'Street, city, country')}
@@ -546,7 +555,7 @@ export default function SchoolRegistrationScreen() {
 
               <FieldLabel>{t('school_registration.school_email', 'School Email')}</FieldLabel>
               <TextInput
-                style={form.input}
+                style={pill.input}
                 value={schoolEmail}
                 onChangeText={setSchoolEmail}
                 placeholder="school@example.com"
@@ -557,7 +566,7 @@ export default function SchoolRegistrationScreen() {
 
               <FieldLabel>{t('school_registration.school_phone', 'School Phone')}</FieldLabel>
               <TextInput
-                style={form.input}
+                style={pill.input}
                 value={schoolPhone}
                 onChangeText={setSchoolPhone}
                 placeholder="+63 912 345 6789"
@@ -571,7 +580,7 @@ export default function SchoolRegistrationScreen() {
             <>
               <FieldLabel required>{t('school_registration.admin_name', 'Your Full Name')}</FieldLabel>
               <TextInput
-                style={form.input}
+                style={pill.input}
                 value={adminName}
                 onChangeText={setAdminName}
                 placeholder={t('school_registration.admin_name_placeholder', 'As it appears on your ID')}
@@ -580,7 +589,7 @@ export default function SchoolRegistrationScreen() {
 
               <FieldLabel required>{t('school_registration.admin_email', 'Your Email')}</FieldLabel>
               <TextInput
-                style={form.input}
+                style={pill.input}
                 value={adminEmail}
                 onChangeText={setAdminEmail}
                 placeholder="you@example.com"
@@ -603,7 +612,7 @@ export default function SchoolRegistrationScreen() {
 
               <FieldLabel>{t('school_registration.admin_phone', 'Your Phone')}</FieldLabel>
               <TextInput
-                style={form.input}
+                style={pill.input}
                 value={adminPhone}
                 onChangeText={setAdminPhone}
                 placeholder="+63 912 345 6789"
@@ -613,7 +622,7 @@ export default function SchoolRegistrationScreen() {
 
               <FieldLabel required>{t('school_registration.password', 'Password')}</FieldLabel>
               <TextInput
-                style={form.input}
+                style={pill.input}
                 value={password}
                 onChangeText={setPassword}
                 placeholder={t('school_registration.password_placeholder', 'Create a strong password')}
@@ -624,7 +633,7 @@ export default function SchoolRegistrationScreen() {
 
               <FieldLabel required>{t('school_registration.confirm_password', 'Confirm Password')}</FieldLabel>
               <TextInput
-                style={form.input}
+                style={pill.input}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 placeholder={t('school_registration.confirm_password_placeholder', 'Re-enter your password')}
@@ -793,10 +802,16 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: COLORS.canvas },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 8 },
-  backBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
-  headerTitle: { fontSize: 19, fontWeight: '800', color: INK },
-  headerSubtitle: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 4 },
+  backBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+
+  titleBlock: { paddingHorizontal: 20, marginTop: 10 },
+  headerTitle: { fontSize: 26, fontWeight: '800', color: INK },
+  stepCaption: { fontSize: 14, color: SUBTLE, marginTop: 6 },
+
+  progressTrack: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginTop: 18, marginBottom: 4 },
+  progressSegment: { flex: 1, height: 4, borderRadius: 2, backgroundColor: BORDER },
+  progressSegmentActive: { backgroundColor: BRAND.emerald },
 
   body: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24 },
   footer: { paddingHorizontal: 20, paddingTop: 10, borderTopWidth: 1, borderTopColor: BORDER, backgroundColor: COLORS.surface },
@@ -806,6 +821,21 @@ const styles = StyleSheet.create({
   successBody: { fontSize: 14, color: SUBTLE, textAlign: 'center', marginTop: 12, lineHeight: 21 },
   pendingBadge: { backgroundColor: COLORS.emeraldSoft, borderRadius: RADIUS.pill, paddingHorizontal: 16, paddingVertical: 9, marginTop: 20, marginBottom: 32 },
   pendingBadgeText: { color: BRAND.emeraldDeep, fontWeight: '700', fontSize: 13 },
+});
+
+// Soft, borderless pill fields instead of WizardKit's shared bordered
+// `form.input` (that style is reused by several other admin wizards - this
+// screen wants its own, rounder look without touching those).
+const pill = StyleSheet.create({
+  input: {
+    backgroundColor: '#EEF1EF',
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: INK,
+  },
+  inputMultiline: { borderRadius: RADIUS.lg, minHeight: 76, textAlignVertical: 'top', paddingTop: 14 },
 });
 
 const verify = StyleSheet.create({
