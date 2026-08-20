@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Alert, Animated, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -157,6 +157,8 @@ export default function AccountSettingsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [options, setOptions] = useState<UserSettingsOptions | null>(null);
+  const [logoutVisible, setLogoutVisible] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   // The header scrolls away WITH the list (it lives inside the ScrollView)
   // rather than staying pinned as a bar the content slides under. These
   // drive its parallax on the way out: it lags behind the scroll and fades,
@@ -197,15 +199,22 @@ export default function AccountSettingsScreen() {
     (navigation as any).navigate('AccountSettingPicker', { settingField, title, options: pickerOptions, currentKey });
   };
 
-  const confirmLogout = () => {
-    Alert.alert(
-      t('menu.log_out_confirm_title', 'Log out?'),
-      t('menu.log_out_confirm_message', "You'll need to sign in again to continue."),
-      [
-        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
-        { text: t('menu.log_out', 'Log Out'), style: 'destructive', onPress: logout },
-      ],
-    );
+  // In-app modal rather than Alert.alert - the native dialog's buttons were
+  // firing their press but never running the handler on some Android builds,
+  // so "Log Out" appeared dead. Owning the buttons keeps them tappable and
+  // lets the confirm show a pending state while the request is in flight.
+  const runLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      // logout() unmounts this screen on success (RootNavigator swaps to the
+      // auth stack); resetting matters for the failure path, where the modal
+      // stays up and the button needs to be pressable again.
+      setLoggingOut(false);
+      setLogoutVisible(false);
+    }
   };
 
   const toggleField = async (field: 'show_email' | 'show_phone', value: boolean) => {
@@ -403,7 +412,7 @@ export default function AccountSettingsScreen() {
           />
         </View>
 
-        <TouchableOpacity style={styles.logoutCard} activeOpacity={0.7} onPress={confirmLogout}>
+        <TouchableOpacity style={styles.logoutCard} activeOpacity={0.7} onPress={() => setLogoutVisible(true)}>
           <View style={styles.logoutIconBadge}>
             <LogOut size={20} color={INK} strokeWidth={2} />
           </View>
@@ -414,6 +423,46 @@ export default function AccountSettingsScreen() {
           <IconChevronRight color={SUBTLE} />
         </TouchableOpacity>
       </Animated.ScrollView>
+
+      <Modal
+        visible={logoutVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => (loggingOut ? undefined : setLogoutVisible(false))}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconBadge}>
+              <LogOut size={26} color={INK} strokeWidth={2} />
+            </View>
+            <Text style={styles.modalTitle}>{t('menu.log_out_confirm_title', 'Log out?')}</Text>
+            <Text style={styles.modalMessage}>
+              {t('menu.log_out_confirm_message', "You'll need to sign in again to continue.")}
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.modalConfirmBtn, loggingOut && styles.modalBtnDisabled]}
+              activeOpacity={0.85}
+              onPress={runLogout}
+              disabled={loggingOut}
+            >
+              {loggingOut ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.modalConfirmText}>{t('menu.log_out', 'Log Out')}</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalCancelBtn}
+              activeOpacity={0.85}
+              onPress={() => setLogoutVisible(false)}
+              disabled={loggingOut}
+            >
+              <Text style={styles.modalCancelText}>{t('common.cancel', 'Cancel')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -481,4 +530,64 @@ const styles = StyleSheet.create({
   logoutTextWrap: { flex: 1 },
   logoutTitle: { fontSize: 15, fontWeight: '700', color: INK },
   logoutSubtitle: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
+
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(8, 15, 12, 0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingTop: 28,
+    paddingBottom: 20,
+    paddingHorizontal: 22,
+    alignItems: 'center',
+    shadowColor: '#0B1F14',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    elevation: 12,
+  },
+  modalIconBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(28,28,30,0.07)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18,
+  },
+  modalTitle: { fontSize: 19, fontWeight: '800', color: INK, textAlign: 'center' },
+  modalMessage: {
+    fontSize: 13.5,
+    color: SUBTLE,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  modalConfirmBtn: {
+    width: '100%',
+    backgroundColor: INK,
+    borderRadius: 999,
+    paddingVertical: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 50,
+  },
+  modalConfirmText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  modalBtnDisabled: { opacity: 0.7 },
+  modalCancelBtn: {
+    width: '100%',
+    borderRadius: 999,
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  modalCancelText: { color: SUBTLE, fontSize: 15, fontWeight: '700' },
 });
