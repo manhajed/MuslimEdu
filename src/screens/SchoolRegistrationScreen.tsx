@@ -18,13 +18,12 @@ import KeyboardAwareModal from '../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import LinearGradient from 'react-native-linear-gradient';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { Camera, ChevronLeft, IdCard, Images, ScanFace, School, X } from 'lucide-react-native';
+import { BookOpen, Camera, Check, ChevronLeft, GraduationCap, Heart, IdCard, Images, ScanFace, School, Users, X } from 'lucide-react-native';
 import { useLocale } from '../context/LocaleContext';
 import { BRAND, COLORS, RADIUS, SHADOW } from '../theme/glass';
 import GlassBackground from '../components/glass/GlassBackground';
-import BentoOptionGrid, { BentoOption } from '../components/glass/BentoOptionGrid';
-import { useAcademicGlassTheme } from './teachers/academicGlassTheme';
 import { preparePostPhoto, InvalidPhotoTypeError } from '../utils/imagePrep';
 import { submitSchoolRegistration, SchoolRegistrationInput } from '../services/schoolRegistrationService';
 import {
@@ -41,9 +40,30 @@ const BORDER = COLORS.border;
 
 type InstitutionType = 'mahad' | 'madrasa' | 'markaz' | 'regular_school' | 'orphanage';
 
-interface InstitutionOption extends BentoOption {
+interface InstitutionOption {
+  id: number;
   type: InstitutionType;
+  name: string;
 }
+
+// Gradient promo-card look for the institution-type picker: each type gets
+// its own two-stop gradient + icon, rather than a flat bento tile - the
+// picker also doubles as the first visual impression of the app.
+const TYPE_GRADIENTS: Record<InstitutionType, [string, string]> = {
+  mahad: ['#2F6FED', '#5B8DFF'],
+  madrasa: ['#63A9FF', '#9AD0FF'],
+  markaz: ['#FB923C', '#F97316'],
+  regular_school: ['#FF7A8A', '#F13C56'],
+  orphanage: ['#34D399', '#10B981'],
+};
+
+const TYPE_ICONS: Record<InstitutionType, typeof School> = {
+  mahad: BookOpen,
+  madrasa: GraduationCap,
+  markaz: Users,
+  regular_school: School,
+  orphanage: Heart,
+};
 
 const INSTITUTION_OPTIONS: InstitutionOption[] = [
   { id: 1, type: 'mahad', name: 'Mahad' },
@@ -111,9 +131,6 @@ interface PickedPhoto {
 
 function BackIcon() {
   return <ChevronLeft size={22} color={INK} strokeWidth={2.1} />;
-}
-function SchoolTypeIcon({ color }: { color: string }) {
-  return <School size={20} color={color} strokeWidth={2} />;
 }
 function IdCardIcon({ color = BRAND.emerald, size = 34 }: { color?: string; size?: number }) {
   return <IdCard size={size} color={color} strokeWidth={1.8} />;
@@ -226,13 +243,86 @@ function InstitutionFeaturePreview({ type }: { type: InstitutionType | null }) {
   );
 }
 
+/**
+ * One gradient promo card in the institution-type grid - pill badge with
+ * the type name, the tagline as the bold headline, and the type's icon
+ * bottom-right in a soft circle. Selection reads through a white ring +
+ * check badge since the card is already a flat saturated color, so a
+ * background-tint change (the usual selected-state trick) wouldn't show.
+ */
+function SchoolTypeCard({
+  option,
+  selected,
+  onPress,
+}: {
+  option: InstitutionOption;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const { t } = useLocale();
+  const Icon = TYPE_ICONS[option.type];
+  const tagline = INSTITUTION_META[option.type].tagline;
+
+  return (
+    <TouchableOpacity activeOpacity={0.9} onPress={onPress} style={typeCard.wrap}>
+      <LinearGradient
+        colors={TYPE_GRADIENTS[option.type]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[typeCard.card, selected && typeCard.cardSelected]}
+      >
+        <View style={typeCard.badge}>
+          <Text style={typeCard.badgeText} numberOfLines={1}>
+            {option.name}
+          </Text>
+        </View>
+
+        <Text style={typeCard.tagline} numberOfLines={3}>
+          {t(`school_registration.tagline_${option.type}`, tagline)}
+        </Text>
+
+        <View style={typeCard.iconWrap}>
+          <Icon size={22} color="#FFFFFF" strokeWidth={1.8} />
+        </View>
+
+        {selected ? (
+          <View style={typeCard.checkBadge}>
+            <Check size={13} color={TYPE_GRADIENTS[option.type][1]} strokeWidth={3} />
+          </View>
+        ) : null}
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+}
+
+function SchoolTypeGrid({
+  options,
+  value,
+  onChange,
+}: {
+  options: InstitutionOption[];
+  value: number | null;
+  onChange: (id: number) => void;
+}) {
+  const { t } = useLocale();
+  return (
+    <View>
+      <Text style={typeCard.label}>{t('school_registration.institution_type', 'Institution Type') + ' *'}</Text>
+      <View style={typeCard.grid}>
+        {options.map((opt) => (
+          <SchoolTypeCard key={opt.id} option={opt} selected={opt.id === value} onPress={() => onChange(opt.id)} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
 /* ========================= MAIN SCREEN ========================= */
 
 export default function SchoolRegistrationScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { t } = useLocale();
-  const theme = useAcademicGlassTheme('emerald');
 
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [submitted, setSubmitted] = useState(false);
@@ -382,14 +472,7 @@ export default function SchoolRegistrationScreen() {
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
           {step === 1 && (
             <>
-              <BentoOptionGrid
-                label={t('school_registration.institution_type', 'Institution Type') + ' *'}
-                options={INSTITUTION_OPTIONS}
-                value={institutionTypeId}
-                onChange={setInstitutionTypeId}
-                icon={(_, color) => <SchoolTypeIcon color={color} />}
-                theme={theme}
-              />
+              <SchoolTypeGrid options={INSTITUTION_OPTIONS} value={institutionTypeId} onChange={setInstitutionTypeId} />
 
               <InstitutionFeaturePreview type={institutionType} />
             </>
@@ -740,6 +823,52 @@ const preview = StyleSheet.create({
   title: { fontSize: 13.5, fontWeight: '800', color: INK, marginBottom: 10 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   rowText: { flex: 1, fontSize: 13, color: INK, lineHeight: 18 },
+});
+
+const typeCard = StyleSheet.create({
+  label: { fontSize: 12.5, fontWeight: '600', color: SUBTLE, marginBottom: 8 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  wrap: { width: '48%' },
+  card: {
+    minHeight: 150,
+    borderRadius: RADIUS.lg,
+    padding: 16,
+    justifyContent: 'space-between',
+    overflow: 'hidden',
+    ...SHADOW.level1,
+  },
+  cardSelected: { borderWidth: 3, borderColor: '#FFFFFF' },
+  badge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  badgeText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' },
+  tagline: { color: '#FFFFFF', fontSize: 13.5, fontWeight: '800', lineHeight: 18, marginTop: 12, marginRight: 40 },
+  iconWrap: {
+    position: 'absolute',
+    right: 14,
+    bottom: 14,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 
 const sheet = StyleSheet.create({

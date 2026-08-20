@@ -55,26 +55,26 @@ const GRADING_TYPE_LABELS: Partial<Record<GradingSystemType, string>> = {
 // throughout this codebase - dashboards already hide all academic tiles and
 // the enrollment gate already excludes orphan students), so the grading and
 // enrollment onboarding steps are skipped entirely for them, not just hidden.
+//
+// Institution type itself is picked once, during SchoolRegistrationScreen -
+// re-asking it here duplicated that choice, so this wizard only re-surfaces
+// the markaz-only program-duration sub-choice (as its own step) rather than
+// the full type picker.
 function buildStepLabels(institutionType: InstitutionType | null) {
-  const base = [
-    { key: 'institution', label: 'Institution' },
+  const base: { key: string; label: string }[] = [];
+  if (institutionType === 'markaz') {
+    base.push({ key: 'program_duration', label: 'Program' });
+  }
+  base.push(
     { key: 'profile', label: 'Profile' },
     { key: 'admin_info', label: 'Your Info' },
     { key: 'academic_year', label: 'Academic Year' },
-  ];
+  );
   if (institutionType !== 'orphanage') {
     base.push({ key: 'grading', label: 'Grading' }, { key: 'enrollment', label: 'Enrollment' });
   }
   return base;
 }
-
-const INSTITUTION_TYPE_LABELS: Record<InstitutionType, string> = {
-  mahad: 'Mahad',
-  madrasa: 'Madrasa',
-  markaz: 'Markaz',
-  regular_school: 'Regular School',
-  orphanage: 'Orphan School',
-};
 
 const PROGRAM_DURATION_LABELS: Record<ProgramDuration, string> = {
   one_year: 'One Year',
@@ -202,24 +202,17 @@ export default function AcademicSetupWizardScreen() {
     if (!token) return;
     setError(null);
 
-    if (stepKey === 'institution') {
-      if (!institutionType) {
-        setError(t('academic_setup_wizard.choose_institution_type', 'Choose an institution type to continue.'));
-        return;
-      }
-      if (institutionType === 'markaz' && !programDuration) {
+    if (stepKey === 'program_duration') {
+      if (!programDuration) {
         setError(t('academic_setup_wizard.choose_program_duration', 'Choose a program duration to continue.'));
         return;
       }
       setSubmitting(true);
       try {
-        await saveInstitutionProfile(token, {
-          institution_type: institutionType,
-          program_duration: institutionType === 'markaz' ? programDuration ?? undefined : undefined,
-        });
+        await saveInstitutionProfile(token, { program_duration: programDuration });
         await advance();
       } catch (err) {
-        setError(err instanceof Error ? err.message : t('academic_setup_wizard.save_type_error', 'Could not save institution type.'));
+        setError(err instanceof Error ? err.message : t('academic_setup_wizard.save_type_error', 'Could not save program duration.'));
       } finally {
         setSubmitting(false);
       }
@@ -418,41 +411,22 @@ export default function AcademicSetupWizardScreen() {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              {stepKey === 'institution' && (
+              {stepKey === 'program_duration' && (
                 <View>
-                  <Text style={styles.stepHeading}>{t('academic_setup_wizard.institution_type_heading', 'What type of institution is this?')}</Text>
+                  <Text style={styles.stepHeading}>{t('academic_setup_wizard.program_duration_heading', 'Program duration')}</Text>
                   <Text style={styles.stepHint}>
-                    {t('academic_setup_wizard.institution_type_hint', 'This only picks editable starting defaults - everything can be renamed or changed later.')}
+                    {t('academic_setup_wizard.program_duration_hint', 'How long is your Markaz program?')}
                   </Text>
                   <View style={styles.tileGrid}>
-                    {status.institution_types.map((type) => (
+                    {status.program_durations.map((duration) => (
                       <OptionTile
-                        key={type}
-                        label={t(`academic_setup_wizard.institution_type_${type}`, INSTITUTION_TYPE_LABELS[type])}
-                        selected={institutionType === type}
-                        onPress={() => setInstitutionType(type)}
+                        key={duration}
+                        label={t(`academic_setup_wizard.program_duration_${duration}`, PROGRAM_DURATION_LABELS[duration])}
+                        selected={programDuration === duration}
+                        onPress={() => setProgramDuration(duration)}
                       />
                     ))}
                   </View>
-
-                  {institutionType === 'markaz' ? (
-                    <View style={styles.programDurationWrap}>
-                      <Text style={styles.stepHeading}>{t('academic_setup_wizard.program_duration_heading', 'Program duration')}</Text>
-                      <Text style={styles.stepHint}>
-                        {t('academic_setup_wizard.program_duration_hint', 'How long is your Markaz program?')}
-                      </Text>
-                      <View style={styles.tileGrid}>
-                        {status.program_durations.map((duration) => (
-                          <OptionTile
-                            key={duration}
-                            label={t(`academic_setup_wizard.program_duration_${duration}`, PROGRAM_DURATION_LABELS[duration])}
-                            selected={programDuration === duration}
-                            onPress={() => setProgramDuration(duration)}
-                          />
-                        ))}
-                      </View>
-                    </View>
-                  ) : null}
                 </View>
               )}
 
@@ -676,7 +650,6 @@ const styles = StyleSheet.create({
   tileCheckSelected: { borderColor: BRAND.emeraldDeep, backgroundColor: BRAND.emeraldDeep },
   tileLabel: { fontSize: 14.5, color: INK, fontWeight: '700', marginTop: 10 },
   tileLabelSelected: { color: BRAND.emeraldDeep },
-  programDurationWrap: { marginTop: 18, paddingTop: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDEEF0' },
 
   // Two labeled fields side by side - a "bento" pairing that halves the
   // vertical space a set of short fields (name/phone, address/phone, etc.)
