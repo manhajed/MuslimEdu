@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Sign In — MuslimEdu</title>
 <meta name="description" content="Sign in to MuslimEdu to manage your school, classes, and community." />
+<!-- Application-layer hardening. See web/SECURITY.md for what this does and
+     does NOT cover - frame-ancestors/X-Frame-Options, HSTS, and X-Content-
+     Type-Options are silently ignored (or unsupported) via <meta> and need
+     real HTTP headers from whatever serves this file. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://manhaje.com; base-uri 'none'; form-action 'none'; upgrade-insecure-requests" />
+<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+<meta http-equiv="Cache-Control" content="no-store" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%95%8C%3C/text%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -335,7 +342,7 @@
     <div class="logo-mark"><img src="data:image/png;base64,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" alt="" /></div>
     <div class="topbar-title">MuslimEdu</div>
     <div class="spacer"></div>
-    <div class="lang-chip" onclick="showToast('Language — coming soon')">
+    <div class="lang-chip" id="langChip">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#0D1E1C" stroke-width="1.6"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9s1.3-6.4 3.8-9z" stroke="#0D1E1C" stroke-width="1.4"/></svg>
       <span>EN</span>
     </div>
@@ -343,7 +350,7 @@
 
   <!-- Step 2/3 topbar -->
   <div class="topbar" id="topbarStepOther" style="display:none;">
-    <div class="back-btn" id="backBtn" onclick="handleBack()">
+    <div class="back-btn" id="backBtn">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="#0D1E1C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
     <div class="topbar-title" id="topbarOtherTitle">Sign in</div>
@@ -367,16 +374,16 @@
         <div class="field-label">E-MAIL</div>
         <div class="input-row">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="#1A7A6E" stroke-width="1.7"/><path d="M22 7l-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" stroke="#1A7A6E" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <input type="email" id="emailInput" placeholder="your@email.com" autocomplete="email" oninput="clearEmailError()" onkeydown="if(event.key==='Enter')goToStep2()" />
+          <input type="email" id="emailInput" placeholder="your@email.com" autocomplete="email" />
         </div>
         <div class="error-text" id="emailError">Please enter a valid email address.</div>
         <div class="helper-text">We'll verify your account, then set up your password.</div>
-        <button class="gradient-btn" onclick="goToStep2()"><span class="spinner"></span><span>Continue</span></button>
+        <button class="gradient-btn" id="continueBtn"><span class="spinner"></span><span>Continue</span></button>
       </div>
 
       <div class="get-started-row">
         <span class="muted">New here?&nbsp;</span>
-        <span class="link" onclick="openSheet()">Get Started</span>
+        <span class="link get-started-link">Get Started</span>
       </div>
     </div>
 
@@ -394,32 +401,32 @@
         <div class="field-label">PASSWORD</div>
         <div class="input-row">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="#1A7A6E" stroke-width="1.7"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#1A7A6E" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="16" r="1" fill="#1A7A6E"/></svg>
-          <input type="password" id="passwordInput" placeholder="Enter your password" autocomplete="current-password" oninput="clearLoginError();updateSubmitState()" onkeydown="if(event.key==='Enter')handleSubmit()" />
-          <span class="eye-btn" onclick="togglePassword()">
+          <input type="password" id="passwordInput" placeholder="Enter your password" autocomplete="current-password" />
+          <span class="eye-btn" id="eyeBtn">
             <svg id="eyeIcon" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="#6B8C88" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="20" x2="20" y2="4" stroke="#6B8C88" stroke-width="1.7" stroke-linecap="round"/></svg>
           </span>
         </div>
 
         <div class="options-row">
-          <div class="remember-row" onclick="toggleRemember()">
+          <div class="remember-row" id="rememberRow">
             <div class="checkbox" id="rememberCheckbox">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-11" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
             <span class="remember-text">Remember me</span>
           </div>
-          <span class="forgot-text" onclick="showToast('Reset link sent — coming soon')">Forgot password?</span>
+          <span class="forgot-text" id="forgotText">Forgot password?</span>
         </div>
 
         <div class="error-text" id="loginError">Incorrect email or password.</div>
 
-        <button class="gradient-btn" id="loginBtn" onclick="handleSubmit()" disabled><span class="spinner"></span><span id="loginBtnLabel">Log In</span></button>
+        <button class="gradient-btn" id="loginBtn" disabled><span class="spinner"></span><span id="loginBtnLabel">Log In</span></button>
       </div>
 
       <div class="step-dots"><div class="dot" id="dot1"></div><div class="dot" id="dot2"></div></div>
 
       <div class="get-started-row">
         <span class="muted">New here?&nbsp;</span>
-        <span class="link" onclick="openSheet()">Get Started</span>
+        <span class="link get-started-link">Get Started</span>
       </div>
     </div>
 
@@ -434,11 +441,11 @@
         <div class="field-label">AUTHENTICATION CODE</div>
         <div class="input-row">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="#1A7A6E" stroke-width="1.7"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#1A7A6E" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="16" r="1" fill="#1A7A6E"/></svg>
-          <input type="text" id="twoFactorInput" placeholder="6-digit code or recovery code" style="text-transform:uppercase;" oninput="clearLoginError();updateTwoFactorState()" onkeydown="if(event.key==='Enter')handleSubmitTwoFactor()" />
+          <input type="text" id="twoFactorInput" placeholder="6-digit code or recovery code" style="text-transform:uppercase;" />
         </div>
         <div class="helper-text">Open your authenticator app for the current code, or use one of your saved recovery codes if you've lost access to it.</div>
         <div class="error-text" id="twoFactorError">That code didn't work. Try again.</div>
-        <button class="gradient-btn" id="verifyBtn" onclick="handleSubmitTwoFactor()" disabled><span class="spinner"></span><span id="verifyBtnLabel">Verify</span></button>
+        <button class="gradient-btn" id="verifyBtn" disabled><span class="spinner"></span><span id="verifyBtnLabel">Verify</span></button>
       </div>
     </div>
 
@@ -453,7 +460,7 @@
         <div class="session-name" id="sessionName"></div>
         <div class="session-email" id="sessionEmail"></div>
         <div class="session-role" id="sessionRole"></div>
-        <button class="gradient-btn" id="logoutBtn" onclick="handleLogout()" style="margin-top:22px;"><span class="spinner"></span><span id="logoutBtnLabel">Log Out</span></button>
+        <button class="gradient-btn" id="logoutBtn" style="margin-top:22px;"><span class="spinner"></span><span id="logoutBtnLabel">Log Out</span></button>
       </div>
     </div>
 
@@ -461,26 +468,26 @@
 
   <div class="footer" id="pageFooter">
     <div class="footer-row">
-      <a href="#" onclick="return false;">Product</a><span class="footer-sep"></span>
-      <a href="#" onclick="return false;">How It Works</a><span class="footer-sep"></span>
-      <a href="#" onclick="return false;">Manhaj</a><span class="footer-sep"></span>
-      <a href="#" onclick="return false;">Resources</a>
+      <a href="#" class="footer-noop">Product</a><span class="footer-sep"></span>
+      <a href="#" class="footer-noop">How It Works</a><span class="footer-sep"></span>
+      <a href="#" class="footer-noop">Manhaj</a><span class="footer-sep"></span>
+      <a href="#" class="footer-noop">Resources</a>
     </div>
     <div class="footer-row" style="margin-top:10px;">
-      <a href="#" onclick="return false;">FAQ</a><span class="footer-sep"></span>
-      <a href="#" onclick="return false;">Guidelines</a>
+      <a href="#" class="footer-noop">FAQ</a><span class="footer-sep"></span>
+      <a href="#" class="footer-noop">Guidelines</a>
     </div>
     <div class="footer-row footer-secondary">
-      <a href="#" onclick="return false;">Privacy Statement</a><span class="footer-sep"></span>
-      <a href="#" onclick="return false;">Terms</a>
+      <a href="#" class="footer-noop">Privacy Statement</a><span class="footer-sep"></span>
+      <a href="#" class="footer-noop">Terms</a>
     </div>
     <div class="footer-copyright">© 2026 MuslimEdu. All rights reserved.</div>
   </div>
 
   <!-- ═══ GET STARTED SHEET ═══ -->
-  <div class="modal-backdrop" id="modalBackdrop" onclick="closeSheetIfBackdrop(event)">
+  <div class="modal-backdrop" id="modalBackdrop">
     <div class="sheet">
-      <div class="sheet-handle-zone" onclick="closeSheet()"><div class="sheet-handle"></div></div>
+      <div class="sheet-handle-zone" id="sheetHandleZone"><div class="sheet-handle"></div></div>
       <h3>Get Started</h3>
       <div class="sheet-subtitle">Choose how you'd like to join MuslimEdu.</div>
 
@@ -495,7 +502,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#1A7A6E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </a>
 
-      <div class="sheet-option" onclick="document.getElementById('alumniNote').classList.add('show')">
+      <div class="sheet-option" id="alumniOption">
         <div class="sheet-option-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 4L2 9l10 5 8-4v6" stroke="#1A7A6E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 12v4c0 1.3 2.7 2.5 6 2.5s6-1.2 6-2.5v-4" stroke="#1A7A6E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
@@ -513,271 +520,6 @@
 
 </div>
 
-<script>
-  // ── Real backend contract — same as src/services/authService.ts ────
-  const API_BASE_URL = 'https://manhaje.com/apps/api';
-  const ENDPOINTS = {
-    login: API_BASE_URL + '/login',
-    me: API_BASE_URL + '/me',
-    logout: API_BASE_URL + '/logout',
-  };
-  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  // Mirrors saveToken/getStoredToken/clearToken (Keychain on native).
-  // "Remember me" picks which storage backs the session: localStorage
-  // survives closing the tab, sessionStorage clears with it.
-  const TOKEN_KEY = 'muslimedu_auth_token';
-
-  let step = 1;
-  let rememberMe = false;
-  let secure = true;
-  let currentEmail = '';
-  let currentPassword = '';
-
-  function getStoredToken() {
-    return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
-  }
-  function saveToken(token) {
-    (rememberMe ? localStorage : sessionStorage).setItem(TOKEN_KEY, token);
-  }
-  function clearStoredToken() {
-    localStorage.removeItem(TOKEN_KEY);
-    sessionStorage.removeItem(TOKEN_KEY);
-  }
-
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    clearTimeout(t._timer);
-    t._timer = setTimeout(() => t.classList.remove('show'), 1800);
-  }
-
-  function clearEmailError() {
-    document.getElementById('emailError').classList.remove('show');
-  }
-  function clearLoginError() {
-    document.getElementById('loginError').classList.remove('show');
-    document.getElementById('twoFactorError').classList.remove('show');
-  }
-  function setError(id, message) {
-    const el = document.getElementById(id);
-    el.textContent = message;
-    el.classList.add('show');
-  }
-
-  function switchPanel(newStep, direction) {
-    document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
-    const panel = document.getElementById('panel' + newStep);
-    panel.style.display = 'block';
-    panel.classList.remove('enter', 'enter-back');
-    void panel.offsetWidth; // reflow to restart animation
-    panel.classList.add(direction === 1 ? 'enter' : 'enter-back');
-
-    const topbar1 = document.getElementById('topbarStep1');
-    const topbarOther = document.getElementById('topbarStepOther');
-    const pill = document.getElementById('stepPillText');
-    const footer = document.getElementById('pageFooter');
-
-    if (newStep === 1) {
-      topbar1.style.display = 'flex';
-      topbarOther.style.display = 'none';
-      pill.textContent = 'STEP 1 OF 2';
-    } else if (newStep === 4) {
-      topbar1.style.display = 'flex';
-      topbarOther.style.display = 'none';
-      pill.textContent = 'SIGNED IN';
-    } else {
-      topbar1.style.display = 'none';
-      topbarOther.style.display = 'flex';
-      document.getElementById('topbarOtherTitle').textContent = newStep === 3 ? "Verify it's you" : 'Sign in';
-      pill.textContent = newStep === 3 ? 'TWO-FACTOR' : 'STEP 2 OF 2';
-    }
-
-    document.getElementById('dot1').classList.toggle('active', newStep === 1);
-    document.getElementById('dot2').classList.toggle('active', newStep === 2);
-    footer.style.display = newStep === 1 || newStep === 4 ? '' : 'none';
-
-    document.getElementById('bodyScroll').scrollTo({ top: 0, behavior: 'smooth' });
-    step = newStep;
-  }
-
-  function goToStep2() {
-    const email = document.getElementById('emailInput').value.trim();
-    if (!EMAIL_RE.test(email)) {
-      document.getElementById('emailError').classList.add('show');
-      return;
-    }
-    clearEmailError();
-    currentEmail = email;
-    document.getElementById('emailChipText').textContent = email;
-    switchPanel(2, 1);
-    setTimeout(() => document.getElementById('passwordInput').focus(), 100);
-  }
-
-  function goToStep1() {
-    switchPanel(1, -1);
-  }
-
-  function handleBack() {
-    if (step === 3) {
-      document.getElementById('twoFactorInput').value = '';
-      clearLoginError();
-      switchPanel(2, -1);
-    } else {
-      goToStep1();
-    }
-  }
-
-  function togglePassword() {
-    const input = document.getElementById('passwordInput');
-    secure = !secure;
-    input.type = secure ? 'password' : 'text';
-    const icon = document.getElementById('eyeIcon');
-    icon.innerHTML = secure
-      ? '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="#6B8C88" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="20" x2="20" y2="4" stroke="#6B8C88" stroke-width="1.7" stroke-linecap="round"/>'
-      : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="#6B8C88" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="#6B8C88" stroke-width="1.7"/>';
-  }
-
-  function toggleRemember() {
-    rememberMe = !rememberMe;
-    document.getElementById('rememberCheckbox').classList.toggle('checked', rememberMe);
-  }
-
-  function updateSubmitState() {
-    const email = document.getElementById('emailInput').value.trim();
-    const pw = document.getElementById('passwordInput').value;
-    document.getElementById('loginBtn').disabled = !(email.length > 0 && pw.length > 0);
-  }
-
-  function updateTwoFactorState() {
-    const code = document.getElementById('twoFactorInput').value.trim();
-    document.getElementById('verifyBtn').disabled = code.length === 0;
-  }
-
-  function handleSubmit() {
-    const btn = document.getElementById('loginBtn');
-    if (btn.disabled) return;
-    currentPassword = document.getElementById('passwordInput').value;
-    submitLogin(btn, 'loginBtnLabel', 'Log In', null);
-  }
-
-  function handleSubmitTwoFactor() {
-    const btn = document.getElementById('verifyBtn');
-    if (btn.disabled) return;
-    const code = document.getElementById('twoFactorInput').value.trim();
-    submitLogin(btn, 'verifyBtnLabel', 'Verify', code);
-  }
-
-  // POST /login — email+password, then again with two_factor_code once the
-  // server flags the account as requiring it. Mirrors authService.loginRequest.
-  function submitLogin(btn, labelId, idleLabel, twoFactorCode) {
-    const label = document.getElementById(labelId);
-    btn.classList.add('loading');
-    btn.disabled = true;
-    label.textContent = 'Please wait…';
-    clearLoginError();
-
-    const body = {
-      email: currentEmail,
-      password: currentPassword,
-      device_name: 'muslimedu-web',
-    };
-    if (twoFactorCode) body.two_factor_code = twoFactorCode;
-
-    fetch(ENDPOINTS.login, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(body),
-    })
-      .then(res => res.json().catch(() => ({})).then(data => ({ res, data })))
-      .then(({ res, data }) => {
-        if (res.ok && data && data.requires_two_factor) {
-          switchPanel(3, 1);
-          setTimeout(() => document.getElementById('twoFactorInput').focus(), 100);
-          return;
-        }
-        if (!res.ok) {
-          setError(twoFactorCode ? 'twoFactorError' : 'loginError', data && data.message ? data.message : 'Login failed.');
-          return;
-        }
-        saveToken(data.token);
-        renderSession(data.user);
-      })
-      .catch(() => {
-        setError(
-          twoFactorCode ? 'twoFactorError' : 'loginError',
-          'Could not reach the server. Check your internet connection.',
-        );
-      })
-      .finally(() => {
-        btn.classList.remove('loading');
-        label.textContent = idleLabel;
-        updateSubmitState();
-        updateTwoFactorState();
-      });
-  }
-
-  // ── Signed-in panel ─────────────────────────────────────────────
-  function renderSession(user) {
-    document.getElementById('sessionAvatar').textContent = (user.name || '?').trim().charAt(0).toUpperCase();
-    document.getElementById('sessionName').textContent = user.name;
-    document.getElementById('sessionEmail').textContent = user.email;
-    document.getElementById('sessionRole').textContent = user.role;
-    switchPanel(4, 1);
-  }
-
-  function handleLogout() {
-    const btn = document.getElementById('logoutBtn');
-    const label = document.getElementById('logoutBtnLabel');
-    const token = getStoredToken();
-    btn.classList.add('loading');
-    btn.disabled = true;
-    label.textContent = 'Please wait…';
-
-    const finish = () => {
-      clearStoredToken();
-      currentEmail = '';
-      currentPassword = '';
-      document.getElementById('emailInput').value = '';
-      document.getElementById('passwordInput').value = '';
-      btn.classList.remove('loading');
-      btn.disabled = false;
-      label.textContent = 'Log Out';
-      switchPanel(1, -1);
-    };
-
-    if (!token) { finish(); return; }
-    fetch(ENDPOINTS.logout, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: 'Bearer ' + token },
-    }).then(finish).catch(finish);
-  }
-
-  function openSheet() {
-    document.getElementById('modalBackdrop').classList.add('open');
-  }
-  function closeSheet() {
-    document.getElementById('modalBackdrop').classList.remove('open');
-  }
-  function closeSheetIfBackdrop(e) {
-    if (e.target.id === 'modalBackdrop') closeSheet();
-  }
-
-  // ── On load: restore session, same as AuthContext's launch check ──
-  (function init() {
-    const token = getStoredToken();
-    if (!token) return;
-    fetch(ENDPOINTS.me, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: 'Bearer ' + token },
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('invalid session');
-        return res.json();
-      })
-      .then(data => renderSession(data.user))
-      .catch(() => clearStoredToken());
-  })();
-</script>
+<script src="login.js" defer></script>
 </body>
 </html>
