@@ -121,12 +121,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resetTwoFactorPrompt = useCallback(() => setRequiresTwoFactor(false), []);
 
   const logout = useCallback(async () => {
-    if (token) {
-      await logoutRequest(token);
+    try {
+      if (token) {
+        await logoutRequest(token);
+      }
+      await clearToken();
+    } finally {
+      // Always clear local session state, even if the keychain wipe above
+      // throws - a stuck keychain shouldn't leave the user unable to sign
+      // out of the app itself.
+      setToken(null);
+      setUser(null);
     }
-    await clearToken();
-    setToken(null);
-    setUser(null);
   }, [token]);
 
   const clearError = useCallback(() => setError(null), []);
