@@ -21,7 +21,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { DISPLAY_SCALE_OPTIONS, useDisplayScale } from '../../context/DisplayScaleContext';
 import { INK, SUBTLE } from '../dashboards/DashboardShell';
-import { BRAND, COLORS } from '../../theme/glass';
+import { BRAND } from '../../theme/glass';
 import { Skeleton } from '../../components/Skeleton';
 import {
   UserSettings,
@@ -254,7 +254,7 @@ export default function AccountSettingsScreen() {
         <SectionLabel title={t('account_settings.accessibility_section', 'Accessibility')} />
         <View style={styles.card}>
           <Row
-            icon={<Type size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<Type size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.display_size_label', 'Text & display size')}
             value={t(`accessibility.size.${displayScaleOpt.key}`, displayScaleOpt.label)}
             isLast
@@ -272,7 +272,7 @@ export default function AccountSettingsScreen() {
         <SectionLabel title={t('account_settings.language_appearance_section', 'Language & appearance')} />
         <View style={styles.card}>
           <Row
-            icon={<Globe size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<Globe size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.language_label', 'Language')}
             value={languageLabel(settings.language)}
             onPress={() =>
@@ -285,7 +285,7 @@ export default function AccountSettingsScreen() {
             }
           />
           <Row
-            icon={<Palette size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<Palette size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.theme_label', 'Theme')}
             value={labelize(settings.theme)}
             onPress={() =>
@@ -298,7 +298,7 @@ export default function AccountSettingsScreen() {
             }
           />
           <Row
-            icon={<CalendarDays size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<CalendarDays size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.calendar_label', 'Calendar')}
             value={labelize(settings.calendar_type)}
             onPress={() =>
@@ -311,7 +311,7 @@ export default function AccountSettingsScreen() {
             }
           />
           <Row
-            icon={<CalendarClock size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<CalendarClock size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.date_format_label', 'Date format')}
             value={settings.date_format}
             isLast
@@ -329,7 +329,7 @@ export default function AccountSettingsScreen() {
         <SectionLabel title={t('account_settings.privacy_section', 'Privacy')} />
         <View style={styles.card}>
           <Row
-            icon={<ShieldCheck size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<ShieldCheck size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.profile_visibility_label', 'Profile visibility')}
             value={labelize(settings.profile_visibility)}
             onPress={() =>
@@ -342,19 +342,19 @@ export default function AccountSettingsScreen() {
             }
           />
           <SwitchRow
-            icon={<Mail size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<Mail size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.show_email_label', 'Show email on my profile')}
             value={settings.show_email}
             onValueChange={(v) => toggleField('show_email', v)}
           />
           <SwitchRow
-            icon={<Phone size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<Phone size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.show_phone_label', 'Show phone on my profile')}
             value={settings.show_phone}
             onValueChange={(v) => toggleField('show_phone', v)}
           />
           <Row
-            icon={<BellRing size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<BellRing size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.digest_emails_label', 'Digest emails')}
             value={labelize(settings.digest_frequency)}
             isLast
@@ -372,7 +372,7 @@ export default function AccountSettingsScreen() {
         <SectionLabel title={t('account_settings.security_section', 'Security')} />
         <View style={styles.card}>
           <Row
-            icon={<KeyRound size={16} color={BRAND.emeraldDeep} strokeWidth={2} />}
+            icon={<KeyRound size={16} color={INK} strokeWidth={2} />}
             title={t('account_settings.change_password', 'Change password')}
             isLast
             onPress={() => (navigation as any).navigate('ChangePassword')}
@@ -381,7 +381,7 @@ export default function AccountSettingsScreen() {
 
         <TouchableOpacity style={styles.logoutCard} activeOpacity={0.7} onPress={confirmLogout}>
           <View style={styles.logoutIconBadge}>
-            <LogOut size={20} color={COLORS.danger} strokeWidth={2} />
+            <LogOut size={20} color={INK} strokeWidth={2} />
           </View>
           <View style={styles.logoutTextWrap}>
             <Text style={styles.logoutTitle}>{t('menu.log_out', 'Log Out')}</Text>
@@ -449,11 +449,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(239,68,68,0.12)',
+    backgroundColor: 'rgba(28,28,30,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   logoutTextWrap: { flex: 1 },
-  logoutTitle: { fontSize: 15, fontWeight: '700', color: COLORS.danger },
+  logoutTitle: { fontSize: 15, fontWeight: '700', color: INK },
   logoutSubtitle: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
 });
