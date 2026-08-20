@@ -128,7 +128,7 @@ function SectionLabel({ title }: { title: string }) {
 
 function ListSkeleton() {
   return (
-    <View style={styles.content}>
+    <View style={[styles.content, { paddingTop: 16 }]}>
       {[0, 1].map((section) => (
         <View key={section} style={{ marginBottom: 20 }}>
           <Skeleton width={130} height={12} style={{ marginBottom: 10, borderRadius: 4 }} />
@@ -157,14 +157,18 @@ export default function AccountSettingsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [options, setOptions] = useState<UserSettingsOptions | null>(null);
-  // Drives the header's parallax as the list scrolls beneath it - the
-  // subtitle fades out over the first ~40px of scroll. (An earlier version
-  // also translateY'd the title, which threw off the back button's
-  // alignment against it since the row's height stayed put while the
-  // title visually drifted out of it - dropped in favor of just the fade.)
+  // The header scrolls away WITH the list (it lives inside the ScrollView)
+  // rather than staying pinned as a bar the content slides under. These
+  // drive its parallax on the way out: it lags behind the scroll and fades,
+  // same feel as the dashboards' hero.
   const scrollY = useRef(new Animated.Value(0)).current;
-  const subtitleOpacity = scrollY.interpolate({
-    inputRange: [0, 40],
+  const headerTranslateY = scrollY.interpolate({
+    inputRange: [0, 120],
+    outputRange: [0, 48],
+    extrapolate: 'clamp',
+  });
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 90],
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
@@ -218,23 +222,28 @@ export default function AccountSettingsScreen() {
   };
 
   const header = (
-    <View style={[styles.header, { paddingTop: insets.top }]}>
+    <Animated.View
+      style={[styles.header, { paddingTop: insets.top, opacity: headerOpacity, transform: [{ translateY: headerTranslateY }] }]}
+    >
       <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={8}>
         <IconChevronLeft color={INK} />
       </TouchableOpacity>
       <View style={styles.headerText}>
         <Text style={styles.headerTitle}>{t('account_settings.header_title', 'Account Settings')}</Text>
-        <Animated.Text style={[styles.headerSub, { opacity: subtitleOpacity }]}>
+        <Text style={styles.headerSub}>
           {t('account_settings.header_subtitle', 'Language, appearance, privacy and password')}
-        </Animated.Text>
+        </Text>
       </View>
-    </View>
+    </Animated.View>
   );
 
+  // headerInset re-adds the padding the header's own negative margin is
+  // there to cancel - these two branches render it outside the scroll
+  // container that normally supplies it.
   if (loading) {
     return (
       <View style={styles.flex}>
-        {header}
+        <View style={styles.headerInset}>{header}</View>
         <ScrollView><ListSkeleton /></ScrollView>
       </View>
     );
@@ -243,7 +252,7 @@ export default function AccountSettingsScreen() {
   if (error || !settings || !options) {
     return (
       <View style={styles.flex}>
-        {header}
+        <View style={styles.headerInset}>{header}</View>
         <View style={styles.center}>
           <Text style={styles.errorTitle}>{t('common.load_failed_title', "Couldn't load this")}</Text>
           <Text style={styles.centerText}>{error ?? t('account_settings.something_wrong', 'Something went wrong.')}</Text>
@@ -260,12 +269,12 @@ export default function AccountSettingsScreen() {
 
   return (
     <View style={styles.flex}>
-      {header}
       <Animated.ScrollView
         contentContainerStyle={styles.content}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
         scrollEventThrottle={16}
       >
+        {header}
         <SectionLabel title={t('account_settings.accessibility_section', 'Accessibility')} />
         <View style={styles.card}>
           <Row
@@ -417,20 +426,25 @@ const styles = StyleSheet.create({
   retryBtn: { marginTop: 20, backgroundColor: BRAND.emeraldDeep, paddingHorizontal: 26, paddingVertical: 12, borderRadius: 999 },
   retryText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
 
-  // Transparent - sits directly on the canvas instead of a separate white
-  // bar, so nothing changes about it as the list scrolls underneath.
+  // Transparent and scrolls away with the list rather than pinning as a
+  // bar. Negative horizontal margin cancels the scroll container's own
+  // padding so this row still spans edge to edge with its own inset.
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginHorizontal: -16,
     paddingHorizontal: 16,
     paddingBottom: 16,
   },
+  headerInset: { paddingHorizontal: 16 },
   backBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   headerText: { flex: 1 },
   headerTitle: { fontSize: 20, fontWeight: '800', color: INK },
   headerSub: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
 
-  content: { padding: 16 },
+  // No top padding - the header is the first scroll child and brings its
+  // own (safe-area) top spacing.
+  content: { paddingHorizontal: 16, paddingBottom: 16 },
   sectionTitle: { fontSize: 13, fontWeight: '800', color: SUBTLE, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10, marginTop: 4, marginLeft: 4 },
 
   card: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: BORDER, overflow: 'hidden', marginBottom: 20 },
