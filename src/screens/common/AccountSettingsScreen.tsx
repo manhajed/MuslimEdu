@@ -21,7 +21,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { DISPLAY_SCALE_OPTIONS, useDisplayScale } from '../../context/DisplayScaleContext';
 import { INK, SUBTLE } from '../dashboards/DashboardShell';
-import { BRAND, COLORS, RADIUS, SHADOW } from '../../theme/glass';
+import { BRAND, COLORS } from '../../theme/glass';
 import { Skeleton } from '../../components/Skeleton';
 import {
   UserSettings,
@@ -440,15 +440,10 @@ const styles = StyleSheet.create({
   logoutCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: BORDER,
     paddingVertical: 14,
     paddingHorizontal: 16,
     gap: 12,
     marginBottom: 20,
-    ...SHADOW.level1,
   },
   logoutIconBadge: {
     width: 40,
