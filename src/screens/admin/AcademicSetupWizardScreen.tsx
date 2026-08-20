@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
@@ -15,9 +14,16 @@ import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import GlassBackground from '../../components/glass/GlassBackground';
 import GlassCard from '../../components/glass/GlassCard';
-import { GlassButton, GlassInput } from '../../components/glass/GlassKit';
 import { WizardStepHeader } from '../../components/wizard/WizardKit';
-import { BRAND, COLORS, RADIUS } from '../../theme/glass';
+import { BRAND, RADIUS } from '../../theme/glass';
+import { Box } from '../../components/ui/box';
+import { VStack } from '../../components/ui/vstack';
+import { HStack } from '../../components/ui/hstack';
+import { Heading } from '../../components/ui/heading';
+import { Text } from '../../components/ui/text';
+import { Button, ButtonText, ButtonSpinner } from '../../components/ui/button';
+import { Input, InputField } from '../../components/ui/input';
+import { FormControl, FormControlLabel, FormControlLabelText } from '../../components/ui/form-control';
 import {
   fetchSetupStatus,
   saveInstitutionProfile,
@@ -36,10 +42,6 @@ import {
 import { createEnrollmentStage } from '../../services/enrollmentWorkflowService';
 
 const EMERALD = BRAND.emerald;
-const EMERALD_SOFT = 'rgba(31,174,100,0.14)';
-const INK = COLORS.ink;
-const SUBTLE = COLORS.subtle;
-const ERROR = '#BA1A1A';
 
 const GRADING_TYPE_QUICK_PICKS: GradingSystemType[] = GRADING_SYSTEM_TYPES.filter((gt) =>
   ['percentage', 'letter', 'gpa', 'pass_fail'].includes(gt),
@@ -86,7 +88,7 @@ function CheckIcon() {
 }
 
 function BuildingIcon() {
-  return <Building2 color={EMERALD} size={28} strokeWidth={1.8} />;
+  return <Building2 color={EMERALD} size={26} strokeWidth={1.8} />;
 }
 
 function SparkleIcon({ size = 40 }: { size?: number }) {
@@ -94,19 +96,70 @@ function SparkleIcon({ size = 40 }: { size?: number }) {
 }
 
 // Bento-style selectable tile - replaces a vertical list of radio rows with
-// a 2-column grid of big, tappable cards. Same selection state/handler as
-// before (onPress just flips whichever useState the caller passes in) -
-// only the visual presentation changed.
+// a 2-column grid of big, tappable cards. Kept as a plain StyleSheet
+// component (not rebuilt on gluestack's Pressable) - it's a specific
+// selection-tile pattern with no direct gluestack equivalent among the
+// components pulled into this app, and the actual redesign target here is
+// the form fields and actions, not this tile grid.
 function OptionTile({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
   return (
     <TouchableOpacity style={[styles.tile, selected && styles.tileSelected]} onPress={onPress} activeOpacity={0.85}>
       <View style={[styles.tileCheck, selected && styles.tileCheckSelected]}>
         {selected ? <CheckIcon /> : null}
       </View>
-      <Text style={[styles.tileLabel, selected && styles.tileLabelSelected]} numberOfLines={2}>
+      <Text className={`text-sm font-bold mt-2.5 ${selected ? 'text-primary' : 'text-foreground'}`} numberOfLines={2}>
         {label}
       </Text>
     </TouchableOpacity>
+  );
+}
+
+/**
+ * A labeled text field for this wizard - FormControl + Input/InputField
+ * wired up the same way across every step, so each step's field block is
+ * just a few of these instead of repeating the label/input pairing.
+ */
+function WizardField({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  editable = true,
+  keyboardType,
+  autoCapitalize,
+  multiline,
+  className,
+}: {
+  label: string;
+  value: string;
+  onChangeText?: (v: string) => void;
+  placeholder?: string;
+  editable?: boolean;
+  keyboardType?: 'default' | 'phone-pad' | 'email-address';
+  autoCapitalize?: 'none' | 'characters';
+  multiline?: boolean;
+  className?: string;
+}) {
+  return (
+    <FormControl className={className}>
+      <FormControlLabel>
+        <FormControlLabelText className="text-muted-foreground text-xs font-semibold">
+          {label}
+        </FormControlLabelText>
+      </FormControlLabel>
+      <Input className={`h-11 rounded-xl bg-background ${!editable ? 'opacity-60' : ''} ${multiline ? 'h-16 items-start py-2' : ''}`}>
+        <InputField
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          editable={editable}
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          multiline={multiline}
+          className="text-foreground"
+        />
+      </Input>
+    </FormControl>
   );
 }
 
@@ -348,14 +401,14 @@ export default function AcademicSetupWizardScreen() {
     return (
       <View style={styles.flex}>
         <GlassBackground variant="canvas" />
-        <View style={styles.welcomeWrap}>
-          <View style={styles.welcomeIconWrap}>
+        <VStack className="flex-1 items-center justify-center px-7" space="md">
+          <Box className="w-20 h-20 rounded-full bg-primary/10 items-center justify-center mb-1">
             <SparkleIcon />
-          </View>
-          <Text style={styles.welcomeTitle}>
+          </Box>
+          <Heading size="2xl" className="text-foreground text-center">
             {t('academic_setup_wizard.welcome_title', 'Welcome to MuslimEdu!')}
-          </Text>
-          <Text style={styles.welcomeBody}>
+          </Heading>
+          <Text className="text-muted-foreground text-center leading-6">
             {t(
               'academic_setup_wizard.welcome_body',
               '{school} has been approved. Let’s get it set up - just a few quick steps before your Admin, Teacher, and Student portals go live.',
@@ -363,22 +416,22 @@ export default function AcademicSetupWizardScreen() {
           </Text>
 
           <GlassCard surface="light" radius={RADIUS.lg} style={styles.welcomePreviewCard}>
-            {STEP_LABELS.map((step_, i) => (
-              <View key={step_.key} style={styles.welcomePreviewRow}>
-                <View style={styles.welcomePreviewDot}>
-                  <Text style={styles.welcomePreviewDotText}>{i + 1}</Text>
-                </View>
-                <Text style={styles.welcomePreviewLabel}>{t(`academic_setup_wizard.step_${step_.key}`, step_.label)}</Text>
-              </View>
-            ))}
+            <VStack space="sm">
+              {STEP_LABELS.map((step_, i) => (
+                <HStack key={step_.key} space="md" className="items-center py-1">
+                  <Box className="w-6 h-6 rounded-full bg-primary/10 items-center justify-center">
+                    <Text className="text-xs font-extrabold text-primary">{i + 1}</Text>
+                  </Box>
+                  <Text className="text-foreground font-semibold">{t(`academic_setup_wizard.step_${step_.key}`, step_.label)}</Text>
+                </HStack>
+              ))}
+            </VStack>
           </GlassCard>
 
-          <GlassButton
-            label={t('academic_setup_wizard.get_started', 'Get Started')}
-            onPress={() => setShowWelcome(false)}
-            style={styles.welcomeButton}
-          />
-        </View>
+          <Button size="lg" className="w-full rounded-xl" onPress={() => setShowWelcome(false)}>
+            <ButtonText>{t('academic_setup_wizard.get_started', 'Get Started')}</ButtonText>
+          </Button>
+        </VStack>
       </View>
     );
   }
@@ -388,17 +441,19 @@ export default function AcademicSetupWizardScreen() {
       <GlassBackground variant="canvas" />
       <KeyboardAvoidingView style={styles.flexInner} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.content}>
-          <View style={styles.headerRow}>
-            <View style={styles.iconWrap}>
+          <HStack space="md" className="items-center mb-4 px-5">
+            <Box className="w-14 h-14 rounded-2xl bg-primary/10 items-center justify-center">
               <BuildingIcon />
-            </View>
-            <View style={styles.flex1}>
-              <Text style={styles.title}>{t('academic_setup_wizard.title', 'Set up your school')}</Text>
-              <Text style={styles.subtitle}>
+            </Box>
+            <VStack className="flex-1">
+              <Heading size="lg" className="text-foreground">
+                {t('academic_setup_wizard.title', 'Set up your school')}
+              </Heading>
+              <Text size="sm" className="text-muted-foreground mt-0.5 leading-5">
                 {t('academic_setup_wizard.subtitle', 'A few quick steps before your Admin, Teacher, and Student portals go live.')}
               </Text>
-            </View>
-          </View>
+            </VStack>
+          </HStack>
 
           <WizardStepHeader
             step={step + 1}
@@ -412,9 +467,11 @@ export default function AcademicSetupWizardScreen() {
               keyboardShouldPersistTaps="handled"
             >
               {stepKey === 'program_duration' && (
-                <View>
-                  <Text style={styles.stepHeading}>{t('academic_setup_wizard.program_duration_heading', 'Program duration')}</Text>
-                  <Text style={styles.stepHint}>
+                <VStack>
+                  <Heading size="md" className="text-foreground mb-1.5">
+                    {t('academic_setup_wizard.program_duration_heading', 'Program duration')}
+                  </Heading>
+                  <Text size="sm" className="text-muted-foreground mb-3.5 leading-5">
                     {t('academic_setup_wizard.program_duration_hint', 'How long is your Markaz program?')}
                   </Text>
                   <View style={styles.tileGrid}>
@@ -427,81 +484,118 @@ export default function AcademicSetupWizardScreen() {
                       />
                     ))}
                   </View>
-                </View>
+                </VStack>
               )}
 
               {stepKey === 'profile' && (
-                <View>
-                  <Text style={styles.stepHeading}>{t('academic_setup_wizard.profile_heading', 'Institution profile')}</Text>
-                  <View style={styles.fieldRow}>
-                    <View style={styles.field}>
-                      <Text style={styles.label}>{t('academic_setup_wizard.name_label', 'Name')}</Text>
-                      <GlassInput value={name} onChangeText={setName} placeholder={t('academic_setup_wizard.name_placeholder', 'Institution name')} style={styles.input} />
-                    </View>
-                    <View style={styles.field}>
-                      <Text style={styles.label}>{t('academic_setup_wizard.name_ar_label', 'Arabic name (optional)')}</Text>
-                      <GlassInput value={nameAr} onChangeText={setNameAr} placeholder="الاسم بالعربية" style={styles.input} />
-                    </View>
-                  </View>
-                  <View style={styles.fieldRow}>
-                    <View style={styles.field}>
-                      <Text style={styles.label}>{t('academic_setup_wizard.address_label', 'Address (optional)')}</Text>
-                      <GlassInput value={address} onChangeText={setAddress} placeholder={t('academic_setup_wizard.address_placeholder', 'Address')} style={styles.input} />
-                    </View>
-                    <View style={styles.field}>
-                      <Text style={styles.label}>{t('academic_setup_wizard.phone_label', 'Phone (optional)')}</Text>
-                      <GlassInput value={phone} onChangeText={setPhone} placeholder={t('academic_setup_wizard.phone_placeholder', 'Phone number')} keyboardType="phone-pad" style={styles.input} />
-                    </View>
-                  </View>
-                </View>
+                <VStack>
+                  <Heading size="md" className="text-foreground mb-3">
+                    {t('academic_setup_wizard.profile_heading', 'Institution profile')}
+                  </Heading>
+                  <HStack space="md">
+                    <WizardField
+                      className="flex-1"
+                      label={t('academic_setup_wizard.name_label', 'Name')}
+                      value={name}
+                      onChangeText={setName}
+                      placeholder={t('academic_setup_wizard.name_placeholder', 'Institution name')}
+                    />
+                    <WizardField
+                      className="flex-1"
+                      label={t('academic_setup_wizard.name_ar_label', 'Arabic name (optional)')}
+                      value={nameAr}
+                      onChangeText={setNameAr}
+                      placeholder="الاسم بالعربية"
+                    />
+                  </HStack>
+                  <HStack space="md" className="mt-3">
+                    <WizardField
+                      className="flex-1"
+                      label={t('academic_setup_wizard.address_label', 'Address (optional)')}
+                      value={address}
+                      onChangeText={setAddress}
+                      placeholder={t('academic_setup_wizard.address_placeholder', 'Address')}
+                    />
+                    <WizardField
+                      className="flex-1"
+                      label={t('academic_setup_wizard.phone_label', 'Phone (optional)')}
+                      value={phone}
+                      onChangeText={setPhone}
+                      placeholder={t('academic_setup_wizard.phone_placeholder', 'Phone number')}
+                      keyboardType="phone-pad"
+                    />
+                  </HStack>
+                </VStack>
               )}
 
               {stepKey === 'admin_info' && (
-                <View>
-                  <Text style={styles.stepHeading}>{t('academic_setup_wizard.admin_info_heading', 'Your info')}</Text>
-                  <Text style={styles.stepHint}>
+                <VStack>
+                  <Heading size="md" className="text-foreground mb-1.5">
+                    {t('academic_setup_wizard.admin_info_heading', 'Your info')}
+                  </Heading>
+                  <Text size="sm" className="text-muted-foreground mb-3.5 leading-5">
                     {t('academic_setup_wizard.admin_info_hint', 'A quick confirmation of your own contact details as the school admin.')}
                   </Text>
-                  <View style={styles.fieldRow}>
-                    <View style={styles.field}>
-                      <Text style={styles.label}>{t('academic_setup_wizard.admin_name_label', 'Your name')}</Text>
-                      <GlassInput value={adminName} onChangeText={setAdminName} placeholder={t('academic_setup_wizard.admin_name_placeholder', 'Your name')} style={styles.input} />
-                    </View>
-                    <View style={styles.field}>
-                      <Text style={styles.label}>{t('academic_setup_wizard.admin_phone_label', 'Phone (optional)')}</Text>
-                      <GlassInput value={adminPhone} onChangeText={setAdminPhone} placeholder={t('academic_setup_wizard.admin_phone_placeholder', 'Your phone number')} keyboardType="phone-pad" style={styles.input} />
-                    </View>
-                  </View>
-                  <Text style={styles.label}>{t('academic_setup_wizard.admin_email_label', 'Email')}</Text>
-                  <GlassInput value={user?.email ?? ''} editable={false} style={[styles.input, styles.inputDisabled]} />
-                </View>
+                  <HStack space="md">
+                    <WizardField
+                      className="flex-1"
+                      label={t('academic_setup_wizard.admin_name_label', 'Your name')}
+                      value={adminName}
+                      onChangeText={setAdminName}
+                      placeholder={t('academic_setup_wizard.admin_name_placeholder', 'Your name')}
+                    />
+                    <WizardField
+                      className="flex-1"
+                      label={t('academic_setup_wizard.admin_phone_label', 'Phone (optional)')}
+                      value={adminPhone}
+                      onChangeText={setAdminPhone}
+                      placeholder={t('academic_setup_wizard.admin_phone_placeholder', 'Your phone number')}
+                      keyboardType="phone-pad"
+                    />
+                  </HStack>
+                  <WizardField
+                    className="mt-3"
+                    label={t('academic_setup_wizard.admin_email_label', 'Email')}
+                    value={user?.email ?? ''}
+                    editable={false}
+                  />
+                </VStack>
               )}
 
               {stepKey === 'academic_year' && (
-                <View>
-                  <Text style={styles.stepHeading}>{t('academic_setup_wizard.year_heading', 'Your first academic year')}</Text>
-                  <Text style={styles.stepHint}>
+                <VStack>
+                  <Heading size="md" className="text-foreground mb-1.5">
+                    {t('academic_setup_wizard.year_heading', 'Your first academic year')}
+                  </Heading>
+                  <Text size="sm" className="text-muted-foreground mb-3.5 leading-5">
                     {t('academic_setup_wizard.year_hint', 'You can add more academic years and terms later from Academic Setup in the admin menu.')}
                   </Text>
-                  <Text style={styles.label}>{t('academic_setup_wizard.year_title_label', 'Academic year title')}</Text>
-                  <GlassInput
+                  <WizardField
+                    label={t('academic_setup_wizard.year_title_label', 'Academic year title')}
                     value={yearTitle}
                     onChangeText={setYearTitle}
                     placeholder="e.g. 2026-2027"
-                    style={styles.input}
                   />
-                </View>
+                </VStack>
               )}
 
               {stepKey === 'grading' && (
-                <View>
-                  <Text style={styles.stepHeading}>{t('academic_setup_wizard.grading_heading', 'Your first grading system')}</Text>
-                  <Text style={styles.stepHint}>
+                <VStack>
+                  <Heading size="md" className="text-foreground mb-1.5">
+                    {t('academic_setup_wizard.grading_heading', 'Your first grading system')}
+                  </Heading>
+                  <Text size="sm" className="text-muted-foreground mb-3.5 leading-5">
                     {t('academic_setup_wizard.grading_hint', 'You can add more grading systems and build out grade scales later from Academic Setup.')}
                   </Text>
-                  <Text style={styles.label}>{t('academic_setup_wizard.grading_name_label', 'Name')}</Text>
-                  <GlassInput value={gradingName} onChangeText={setGradingName} placeholder={t('academic_setup_wizard.grading_name_placeholder', 'e.g. Standard Grading')} style={styles.input} />
-                  <Text style={styles.label}>{t('academic_setup_wizard.grading_type_label', 'Type')}</Text>
+                  <WizardField
+                    label={t('academic_setup_wizard.grading_name_label', 'Name')}
+                    value={gradingName}
+                    onChangeText={setGradingName}
+                    placeholder={t('academic_setup_wizard.grading_name_placeholder', 'e.g. Standard Grading')}
+                  />
+                  <Text size="xs" className="text-muted-foreground font-semibold mt-3.5 mb-2">
+                    {t('academic_setup_wizard.grading_type_label', 'Type')}
+                  </Text>
                   <View style={styles.tileGrid}>
                     {GRADING_TYPE_QUICK_PICKS.map((gt) => (
                       <OptionTile
@@ -512,61 +606,75 @@ export default function AcademicSetupWizardScreen() {
                       />
                     ))}
                   </View>
-                </View>
+                </VStack>
               )}
 
               {stepKey === 'enrollment' && (
-                <View>
-                  <Text style={styles.stepHeading}>{t('academic_setup_wizard.enrollment_heading', 'Your first enrollment stage')}</Text>
-                  <Text style={styles.stepHint}>
+                <VStack>
+                  <Heading size="md" className="text-foreground mb-1.5">
+                    {t('academic_setup_wizard.enrollment_heading', 'Your first enrollment stage')}
+                  </Heading>
+                  <Text size="sm" className="text-muted-foreground mb-3.5 leading-5">
                     {t('academic_setup_wizard.enrollment_hint', 'You can build out a full multi-stage pipeline later from Enrollment in the admin menu.')}
                   </Text>
-                  <View style={styles.fieldRow}>
-                    <View style={[styles.field, { flex: 2 }]}>
-                      <Text style={styles.label}>{t('academic_setup_wizard.stage_name_label', 'Stage name')}</Text>
-                      <GlassInput value={stageName} onChangeText={setStageName} placeholder={t('academic_setup_wizard.stage_name_placeholder', 'e.g. Admission')} style={styles.input} />
-                    </View>
-                    <View style={styles.field}>
-                      <Text style={styles.label}>{t('academic_setup_wizard.stage_code_label', 'Code (optional)')}</Text>
-                      <GlassInput value={stageCode} onChangeText={setStageCode} placeholder={t('academic_setup_wizard.stage_code_placeholder', 'e.g. ADMISSION')} autoCapitalize="characters" style={styles.input} />
-                    </View>
-                  </View>
-                  <Text style={styles.label}>{t('academic_setup_wizard.stage_instructions_label', "What should the student do? (optional)")}</Text>
-                  <GlassInput
+                  <HStack space="md">
+                    <WizardField
+                      className="flex-[2]"
+                      label={t('academic_setup_wizard.stage_name_label', 'Stage name')}
+                      value={stageName}
+                      onChangeText={setStageName}
+                      placeholder={t('academic_setup_wizard.stage_name_placeholder', 'e.g. Admission')}
+                    />
+                    <WizardField
+                      className="flex-1"
+                      label={t('academic_setup_wizard.stage_code_label', 'Code (optional)')}
+                      value={stageCode}
+                      onChangeText={setStageCode}
+                      placeholder={t('academic_setup_wizard.stage_code_placeholder', 'e.g. ADMISSION')}
+                      autoCapitalize="characters"
+                    />
+                  </HStack>
+                  <WizardField
+                    className="mt-3"
+                    label={t('academic_setup_wizard.stage_instructions_label', "What should the student do? (optional)")}
                     value={stageInstructions}
                     onChangeText={setStageInstructions}
                     placeholder={t('academic_setup_wizard.stage_instructions_placeholder', 'Shown to the student at this stage')}
-                    style={[styles.input, styles.textArea]}
                     multiline
-                    numberOfLines={2}
                   />
-                  <View style={styles.switchRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.switchLabel}>{t('academic_setup_wizard.stage_final_label', 'Final stage')}</Text>
-                      <Text style={styles.stepHint}>
+                  <HStack className="items-center mt-4 py-1" space="md">
+                    <VStack className="flex-1">
+                      <Text className="text-foreground font-semibold mb-0.5">
+                        {t('academic_setup_wizard.stage_final_label', 'Final stage')}
+                      </Text>
+                      <Text size="sm" className="text-muted-foreground leading-5">
                         {t('academic_setup_wizard.stage_final_hint', "Reaching this stage marks the student's enrollment as complete. A new school usually starts with just one.")}
                       </Text>
-                    </View>
+                    </VStack>
                     <Switch value={stageIsTerminal} onValueChange={setStageIsTerminal} trackColor={{ true: EMERALD }} />
-                  </View>
-                </View>
+                  </HStack>
+                </VStack>
               )}
             </ScrollView>
           </GlassCard>
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {error ? (
+            <Text className="text-destructive text-sm text-center px-5 mb-3">{error}</Text>
+          ) : null}
 
-          <View style={styles.actions}>
+          <HStack space="sm" className="px-5 pb-1">
             {step > 0 ? (
-              <GlassButton label={t('common.back', 'Back')} variant="ghost" onPress={goBack} disabled={submitting} style={styles.backButton} />
+              <Button variant="outline" className="flex-1 rounded-xl" onPress={goBack} disabled={submitting}>
+                <ButtonText>{t('common.back', 'Back')}</ButtonText>
+              </Button>
             ) : null}
-            <GlassButton
-              label={isLastStep ? t('academic_setup_wizard.finish_setup', 'Finish Setup') : t('academic_setup_wizard.continue', 'Continue')}
-              onPress={goNext}
-              loading={submitting}
-              style={styles.nextButton}
-            />
-          </View>
+            <Button className="flex-[2] rounded-xl" onPress={goNext} disabled={submitting}>
+              {submitting ? <ButtonSpinner color="white" /> : null}
+              <ButtonText>
+                {isLastStep ? t('academic_setup_wizard.finish_setup', 'Finish Setup') : t('academic_setup_wizard.continue', 'Continue')}
+              </ButtonText>
+            </Button>
+          </HStack>
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -576,7 +684,6 @@ export default function AcademicSetupWizardScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: '#EFF7F1' },
   flexInner: { flex: 1 },
-  flex1: { flex: 1 },
   centerLoading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   // flex (not flexGrow) - the header, stepper and action buttons stay put
   // as a fixed frame; only the step card's own content scrolls (see
@@ -584,23 +691,6 @@ const styles = StyleSheet.create({
   // step card goes edge-to-edge; every other row gets its own horizontal
   // padding instead of inheriting one blanket inset.
   content: { flex: 1, paddingTop: 56 },
-
-  // Icon + title/subtitle side by side instead of stacked and centered -
-  // a big, clear header that costs less vertical space than the old
-  // centered icon-above-title layout, which matters now that nothing
-  // scrolls.
-  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 18, paddingHorizontal: 20 },
-  iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: EMERALD_SOFT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
-  title: { fontSize: 20, fontWeight: '800', color: INK },
-  subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 18, marginTop: 3 },
 
   // flex:1 - the step card fills whatever vertical space is left between
   // the stepper above and the action buttons below.
@@ -617,8 +707,6 @@ const styles = StyleSheet.create({
   // it the card's inner wrapper sizes to content and nothing ever scrolls.
   stepCardContent: { flex: 1 },
   stepScroll: { flexGrow: 1, justifyContent: 'center' },
-  stepHeading: { fontSize: 17, fontWeight: '700', color: INK, marginBottom: 6 },
-  stepHint: { fontSize: 12.5, color: SUBTLE, lineHeight: 18, marginBottom: 14 },
 
   // Bento grid: big, self-contained selectable tiles (2 per row) instead
   // of a vertical list of plain radio rows - fewer, taller rows means the
@@ -634,7 +722,7 @@ const styles = StyleSheet.create({
     padding: 14,
     justifyContent: 'space-between',
   },
-  tileSelected: { borderColor: EMERALD, backgroundColor: EMERALD_SOFT },
+  tileSelected: { borderColor: EMERALD, backgroundColor: 'rgba(31,174,100,0.14)' },
   tileCheck: {
     width: 22,
     height: 22,
@@ -648,52 +736,6 @@ const styles = StyleSheet.create({
   // BRAND.emeraldDeep, not EMERALD - white check icon on raw emerald
   // (#1FAE64) measures 2.88:1, below WCAG AA; deep emerald measures 5.42:1.
   tileCheckSelected: { borderColor: BRAND.emeraldDeep, backgroundColor: BRAND.emeraldDeep },
-  tileLabel: { fontSize: 14.5, color: INK, fontWeight: '700', marginTop: 10 },
-  tileLabelSelected: { color: BRAND.emeraldDeep },
 
-  // Two labeled fields side by side - a "bento" pairing that halves the
-  // vertical space a set of short fields (name/phone, address/phone, etc.)
-  // would otherwise take stacked one per row.
-  fieldRow: { flexDirection: 'row', gap: 12 },
-  field: { flex: 1 },
-
-  label: { fontSize: 12.5, fontWeight: '600', color: SUBTLE, marginBottom: 6, marginTop: 10 },
-  input: {},
-  inputDisabled: { opacity: 0.6 },
-  textArea: { minHeight: 64, paddingTop: 12 },
-
-  switchRow: { flexDirection: 'row', alignItems: 'center', marginTop: 14, paddingVertical: 4, gap: 12 },
-  switchLabel: { fontSize: 14.5, fontWeight: '600', color: INK, marginBottom: 3 },
-
-  errorText: { color: ERROR, fontSize: 13.5, marginBottom: 12, textAlign: 'center', paddingHorizontal: 20 },
-
-  actions: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingBottom: 4 },
-  backButton: { flex: 1 },
-  nextButton: { flex: 2 },
-
-  welcomeWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
-  welcomeIconWrap: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: EMERALD_SOFT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  welcomeTitle: { fontSize: 24, fontWeight: '800', color: INK, textAlign: 'center', marginBottom: 10 },
-  welcomeBody: { fontSize: 14, color: SUBTLE, textAlign: 'center', lineHeight: 21, marginBottom: 24 },
-  welcomePreviewCard: { width: '100%', marginBottom: 28 },
-  welcomePreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
-  welcomePreviewDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: EMERALD_SOFT,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  welcomePreviewDotText: { fontSize: 11.5, fontWeight: '800', color: BRAND.emeraldDeep },
-  welcomePreviewLabel: { fontSize: 14, fontWeight: '600', color: INK },
-  welcomeButton: { width: '100%' },
+  welcomePreviewCard: { width: '100%' },
 });
