@@ -1,9 +1,7 @@
-import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  ChevronLeft,
   ChevronRight,
   Type,
   Globe,
@@ -23,6 +21,7 @@ import { DISPLAY_SCALE_OPTIONS, useDisplayScale } from '../../context/DisplaySca
 import { INK, SUBTLE } from '../dashboards/DashboardShell';
 import { BRAND } from '../../theme/glass';
 import { Skeleton } from '../../components/Skeleton';
+import ScreenHeader from '../../components/ScreenHeader';
 import {
   UserSettings,
   UserSettingsOptions,
@@ -70,9 +69,6 @@ function languageLabel(code: string) {
   return LANGUAGE_LABELS[code] ?? labelize(code);
 }
 
-function IconChevronLeft({ color }: { color: string }) {
-  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
-}
 function IconChevronRight({ color }: { color: string }) {
   return <ChevronRight size={18} color={color} strokeWidth={2.2} />;
 }
@@ -148,7 +144,6 @@ function ListSkeleton() {
 
 export default function AccountSettingsScreen() {
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
   const { token, logout } = useAuth();
   const { t } = useLocale();
   const { scale, setScale } = useDisplayScale();
@@ -159,22 +154,6 @@ export default function AccountSettingsScreen() {
   const [options, setOptions] = useState<UserSettingsOptions | null>(null);
   const [logoutVisible, setLogoutVisible] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  // The header scrolls away WITH the list (it lives inside the ScrollView)
-  // rather than staying pinned as a bar the content slides under. These
-  // drive its parallax on the way out: it lags behind the scroll and fades,
-  // same feel as the dashboards' hero.
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const headerTranslateY = scrollY.interpolate({
-    inputRange: [0, 120],
-    outputRange: [0, 48],
-    extrapolate: 'clamp',
-  });
-  const headerOpacity = scrollY.interpolate({
-    inputRange: [0, 90],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-
   const load = useCallback(async () => {
     if (!token) return;
     setError(null);
@@ -231,28 +210,16 @@ export default function AccountSettingsScreen() {
   };
 
   const header = (
-    <Animated.View
-      style={[styles.header, { paddingTop: insets.top, opacity: headerOpacity, transform: [{ translateY: headerTranslateY }] }]}
-    >
-      <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={8}>
-        <IconChevronLeft color={INK} />
-      </TouchableOpacity>
-      <View style={styles.headerText}>
-        <Text style={styles.headerTitle}>{t('account_settings.header_title', 'Account Settings')}</Text>
-        <Text style={styles.headerSub}>
-          {t('account_settings.header_subtitle', 'Language, appearance, privacy and password')}
-        </Text>
-      </View>
-    </Animated.View>
+    <ScreenHeader
+      title={t('account_settings.header_title', 'Account Settings')}
+      caption={t('account_settings.header_subtitle', 'Language, appearance, privacy and password')}
+    />
   );
 
-  // headerInset re-adds the padding the header's own negative margin is
-  // there to cancel - these two branches render it outside the scroll
-  // container that normally supplies it.
   if (loading) {
     return (
       <View style={styles.flex}>
-        <View style={styles.headerInset}>{header}</View>
+        {header}
         <ScrollView><ListSkeleton /></ScrollView>
       </View>
     );
@@ -261,7 +228,7 @@ export default function AccountSettingsScreen() {
   if (error || !settings || !options) {
     return (
       <View style={styles.flex}>
-        <View style={styles.headerInset}>{header}</View>
+        {header}
         <View style={styles.center}>
           <Text style={styles.errorTitle}>{t('common.load_failed_title', "Couldn't load this")}</Text>
           <Text style={styles.centerText}>{error ?? t('account_settings.something_wrong', 'Something went wrong.')}</Text>
@@ -278,11 +245,7 @@ export default function AccountSettingsScreen() {
 
   return (
     <View style={styles.flex}>
-      <Animated.ScrollView
-        contentContainerStyle={styles.content}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
-        scrollEventThrottle={16}
-      >
+      <ScrollView contentContainerStyle={styles.content}>
         {header}
         <SectionLabel title={t('account_settings.accessibility_section', 'Accessibility')} />
         <View style={styles.card}>
@@ -422,7 +385,7 @@ export default function AccountSettingsScreen() {
           </View>
           <IconChevronRight color={SUBTLE} />
         </TouchableOpacity>
-      </Animated.ScrollView>
+      </ScrollView>
 
       <Modal
         visible={logoutVisible}

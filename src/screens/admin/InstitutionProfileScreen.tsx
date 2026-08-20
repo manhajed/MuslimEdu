@@ -21,6 +21,7 @@ import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS, BRAND } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import ScreenHeader from '../../components/ScreenHeader';
 import { WizardStepHeader } from '../../components/wizard/WizardKit';
 import {
   prepareProfilePhoto,
@@ -334,13 +335,12 @@ export default function InstitutionProfileScreen() {
   if (loading || !status) {
     return (
       <View style={styles.container}>
-        <View style={[styles.header, { paddingTop: insets.top }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-            <IconChevronLeft color={theme.textPrimary} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('institution_profile.title', 'Institution Profile')}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        <ScreenHeader
+          title={t('institution_profile.title', 'Institution Profile')}
+          ink={theme.textPrimary}
+          subtle={theme.textSecondary}
+          backBg={theme.surface}
+        />
         <View style={styles.centered}>
           <ActivityIndicator color={theme.accent} />
         </View>
@@ -356,13 +356,12 @@ export default function InstitutionProfileScreen() {
   return (
     <View style={styles.container}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-          <IconChevronLeft color={theme.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('institution_profile.title', 'Institution Profile')}</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader
+        title={t('institution_profile.title', 'Institution Profile')}
+        ink={theme.textPrimary}
+        subtle={theme.textSecondary}
+        backBg={theme.surface}
+      />
 
       <KeyboardAvoidingView style={styles.flexInner} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <WizardStepHeader step={step + 1} labels={visibleStepKeys.map(stepLabel)} />
