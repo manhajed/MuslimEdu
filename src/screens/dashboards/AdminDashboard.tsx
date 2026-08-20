@@ -1255,7 +1255,10 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   scrollFlex: { flex: 1, zIndex: 1, elevation: 1 },
-  scrollContent: { paddingBottom: 40 },
+  // flexGrow (not a trailing paddingBottom) so the white body panel below
+  // can stretch into any leftover height - padding here would instead show
+  // as a strip of bare canvas between the panel's end and the tab bar.
+  scrollContent: { flexGrow: 1 },
 
   headerRow: {
     flexDirection: 'row',
@@ -1331,12 +1334,12 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     paddingHorizontal: 20,
     paddingTop: 26,
+    paddingBottom: 24,
     marginTop: 24,
-    // Floor lowered from 520 now that the Log Out footer card no longer
-    // renders here (moved to Account Settings) - that 520 was sized to
-    // include it, and left a bare stretch of white below the last section
-    // once it was gone.
-    minHeight: 420,
+    // Grows into whatever height the hero leaves over instead of a fixed
+    // floor, so the panel always reaches the bottom of the scroll view -
+    // short menus no longer end mid-screen with canvas showing beneath.
+    flexGrow: 1,
   },
   sectionLabel: {
     fontSize: 13,
