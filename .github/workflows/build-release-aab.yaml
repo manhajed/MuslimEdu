@@ -43,11 +43,27 @@ jobs:
           cp -r source-files/src MuslimEdu/src
           cp source-files/App.tsx MuslimEdu/App.tsx
 
+      - name: Copy gluestack-ui / NativeWind config over the CLI template's own
+        run: |
+          cp source-files/babel.config.js MuslimEdu/babel.config.js
+          cp source-files/metro.config.js MuslimEdu/metro.config.js
+          cp source-files/postcss.config.js MuslimEdu/postcss.config.js
+          cp source-files/global.css MuslimEdu/global.css
+          cp source-files/react-native-css-env.d.ts MuslimEdu/react-native-css-env.d.ts
+
       - name: Copy your app icon over the default one
         run: cp -r source-files/android-icons/* MuslimEdu/android/app/src/main/res/
 
       - name: Lock the app to portrait orientation
         run: sed -i '/android:name=".MainActivity"/a\      android:screenOrientation="portrait"' MuslimEdu/android/app/src/main/AndroidManifest.xml
+
+      - name: Enable New Architecture (required by react-native-reanimated v4)
+        run: |
+          if grep -q '^newArchEnabled=' MuslimEdu/android/gradle.properties; then
+            sed -i 's/^newArchEnabled=.*/newArchEnabled=true/' MuslimEdu/android/gradle.properties
+          else
+            echo 'newArchEnabled=true' >> MuslimEdu/android/gradle.properties
+          fi
 
       - name: Add camera permission for QR/ID scanning
         run: sed -i '/<manifest[^>]*>/a\    <uses-permission android:name="android.permission.CAMERA" />' MuslimEdu/android/app/src/main/AndroidManifest.xml
@@ -77,6 +93,12 @@ jobs:
         run: |
           sed -i '/classpath("com.facebook.react:react-native-gradle-plugin")/a\        classpath("com.google.gms:google-services:4.4.2")' MuslimEdu/android/build.gradle
           echo 'apply plugin: "com.google.gms.google-services"' >> MuslimEdu/android/app/build.gradle
+
+      - name: Pin lightningcss (NativeWind v5 build error otherwise)
+        working-directory: MuslimEdu
+        run: |
+          npm pkg set overrides.lightningcss=1.30.1
+          npm pkg set resolutions.lightningcss=1.30.1
 
       - name: Install base dependencies
         working-directory: MuslimEdu
@@ -109,6 +131,25 @@ jobs:
             "@react-native-community/geolocation@^3.4.0" \
             "@react-native-firebase/app@^21.6.1" \
             "@react-native-firebase/messaging@^21.6.1"
+
+      - name: Install gluestack-ui + NativeWind + Tailwind packages
+        working-directory: MuslimEdu
+        run: |
+          npm install --legacy-peer-deps \
+            "@gluestack-ui/core@^5.0.15" \
+            "@gluestack-ui/utils@^5.0.6" \
+            "nativewind@^5.0.0-preview.4" \
+            "react-native-css@^3.0.4" \
+            "react-aria@^3.45.0" \
+            "@expo/html-elements@^0.12.5" \
+            "tailwind-variants@^0.1.20" \
+            "@legendapp/motion@^2.4.0" \
+            "react-stately@^3.39.0" \
+            "react-native-reanimated@~4.2.1" \
+            "react-native-worklets@^0.7.1"
+          npm install --legacy-peer-deps --save-dev \
+            "tailwindcss@^4.2.0" \
+            "@tailwindcss/postcss@^4.2.0"
 
       - name: Set the version shown in the Play Store and internal build number
         working-directory: MuslimEdu/android/app
