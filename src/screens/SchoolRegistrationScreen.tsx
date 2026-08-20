@@ -862,9 +862,7 @@ const preview = StyleSheet.create({
 const typeCard = StyleSheet.create({
   label: { fontSize: 12.5, fontWeight: '600', color: SUBTLE, marginBottom: 8 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
-  // Shadow (elevation, on Android) stays on this outer wrapper, never on the
-  // clipped gradient card below it - see SchoolTypeCard's doc comment.
-  wrap: { width: '47%', borderRadius: RADIUS.lg, ...SHADOW.level1 },
+  wrap: { width: '47%', borderRadius: RADIUS.lg },
   card: {
     minHeight: 190,
     borderRadius: RADIUS.lg,
