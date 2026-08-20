@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,6 @@ import {
   Alert,
   ActivityIndicator,
   Animated,
-  Easing,
 } from 'react-native';
 import KeyboardAwareModal from '../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
@@ -195,51 +194,51 @@ function PasswordStrengthChecklist({ password }: { password: string }) {
 }
 
 /**
- * Feature-reveal card shown under the institution-type grid - the whole
- * point is to answer "what do I actually get" right where the choice is
- * made, instead of leaving it to be discovered later. Re-plays its
- * fade/slide-in every time `type` changes (not a one-shot animation) so
- * switching between tiles keeps feeling responsive rather than static
- * after the first pick.
+ * Feature details for the selected institution type, shown as a bottom
+ * sheet (opened right after a card is tapped) instead of an inline card
+ * under the grid - answers "what do I actually get" without pushing the
+ * rest of the form down / requiring a scroll to see it.
  */
-function InstitutionFeaturePreview({ type }: { type: InstitutionType | null }) {
+function InstitutionFeatureSheet({
+  visible,
+  type,
+  onClose,
+  insetsBottom,
+}: {
+  visible: boolean;
+  type: InstitutionType | null;
+  onClose: () => void;
+  insetsBottom: number;
+}) {
   const { t } = useLocale();
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(10)).current;
-
-  useEffect(() => {
-    if (!type) return;
-    opacity.setValue(0);
-    translateY.setValue(10);
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 240, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 240, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-    ]).start();
-  }, [type, opacity, translateY]);
-
-  if (!type) {
-    return (
-      <View style={preview.hintCard}>
-        <Text style={preview.hintText}>
-          {t('school_registration.type_hint', 'Pick an institution type above to see what it comes with.')}
-        </Text>
-      </View>
-    );
-  }
-
+  if (!type) return null;
   const meta = INSTITUTION_META[type];
 
   return (
-    <Animated.View style={[preview.card, { opacity, transform: [{ translateY }] }]}>
-      <Text style={preview.tagline}>{t(`school_registration.tagline_${type}`, meta.tagline)}</Text>
-      <Text style={preview.title}>{t('school_registration.features_title', "What you'll get")}</Text>
-      {meta.features.map((feature, i) => (
-        <View key={feature} style={preview.row}>
-          <FeatureCheckIcon />
-          <Text style={preview.rowText}>{t(`school_registration.feature_${type}_${i}`, feature)}</Text>
+    <KeyboardAwareModal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={sheet.backdrop}>
+        <TouchableOpacity style={sheet.backdropTouch} activeOpacity={1} onPress={onClose} />
+        <View style={[sheet.sheet, { paddingBottom: Math.max(insetsBottom, 20) }]}>
+          <View style={sheet.handle} />
+          <View style={sheet.headerRow}>
+            <Text style={[sheet.title, { flex: 1, marginRight: 12 }]} numberOfLines={2}>
+              {t(`school_registration.tagline_${type}`, meta.tagline)}
+            </Text>
+            <TouchableOpacity onPress={onClose} hitSlop={12} style={sheet.closeBtn}>
+              <CloseIcon />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={preview.title}>{t('school_registration.features_title', "What you'll get")}</Text>
+          {meta.features.map((feature, i) => (
+            <View key={feature} style={preview.row}>
+              <FeatureCheckIcon />
+              <Text style={preview.rowText}>{t(`school_registration.feature_${type}_${i}`, feature)}</Text>
+            </View>
+          ))}
         </View>
-      ))}
-    </Animated.View>
+      </View>
+    </KeyboardAwareModal>
   );
 }
 
@@ -249,6 +248,13 @@ function InstitutionFeaturePreview({ type }: { type: InstitutionType | null }) {
  * bottom-right in a soft circle. Selection reads through a white ring +
  * check badge since the card is already a flat saturated color, so a
  * background-tint change (the usual selected-state trick) wouldn't show.
+ *
+ * The shadow lives on the outer (non-clipping) wrapper, never on the
+ * LinearGradient itself - on Android, a view with overflow:hidden + rounded
+ * corners + elevation but no border can fail to render its children
+ * entirely, which is why every unselected card used to render blank.
+ * Press feedback is a spring scale on the wrapper rather than just opacity,
+ * so tapping a card actually reads as a tap.
  */
 function SchoolTypeCard({
   option,
@@ -262,36 +268,46 @@ function SchoolTypeCard({
   const { t } = useLocale();
   const Icon = TYPE_ICONS[option.type];
   const tagline = INSTITUTION_META[option.type].tagline;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const pressIn = () => {
+    Animated.spring(scale, { toValue: 0.95, useNativeDriver: true, speed: 40, bounciness: 6 }).start();
+  };
+  const pressOut = () => {
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30, bounciness: 8 }).start();
+  };
 
   return (
-    <TouchableOpacity activeOpacity={0.9} onPress={onPress} style={typeCard.wrap}>
-      <LinearGradient
-        colors={TYPE_GRADIENTS[option.type]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[typeCard.card, selected && typeCard.cardSelected]}
-      >
-        <View style={typeCard.badge}>
-          <Text style={typeCard.badgeText} numberOfLines={1}>
-            {option.name}
-          </Text>
-        </View>
-
-        <Text style={typeCard.tagline} numberOfLines={3}>
-          {t(`school_registration.tagline_${option.type}`, tagline)}
-        </Text>
-
-        <View style={typeCard.iconWrap}>
-          <Icon size={22} color="#FFFFFF" strokeWidth={1.8} />
-        </View>
-
-        {selected ? (
-          <View style={typeCard.checkBadge}>
-            <Check size={13} color={TYPE_GRADIENTS[option.type][1]} strokeWidth={3} />
+    <Animated.View style={[typeCard.wrap, { transform: [{ scale }] }]}>
+      <TouchableOpacity activeOpacity={0.92} onPress={onPress} onPressIn={pressIn} onPressOut={pressOut}>
+        <LinearGradient
+          colors={TYPE_GRADIENTS[option.type]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[typeCard.card, selected && typeCard.cardSelected]}
+        >
+          <View style={typeCard.badge}>
+            <Text style={typeCard.badgeText} numberOfLines={1}>
+              {option.name}
+            </Text>
           </View>
-        ) : null}
-      </LinearGradient>
-    </TouchableOpacity>
+
+          <Text style={typeCard.tagline} numberOfLines={3}>
+            {t(`school_registration.tagline_${option.type}`, tagline)}
+          </Text>
+
+          <View style={typeCard.iconWrap}>
+            <Icon size={22} color="#FFFFFF" strokeWidth={1.8} />
+          </View>
+
+          {selected ? (
+            <View style={typeCard.checkBadge}>
+              <Check size={13} color={TYPE_GRADIENTS[option.type][1]} strokeWidth={3} />
+            </View>
+          ) : null}
+        </LinearGradient>
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
@@ -329,6 +345,7 @@ export default function SchoolRegistrationScreen() {
 
   // Step 1 - Institution type
   const [institutionTypeId, setInstitutionTypeId] = useState<number | null>(null);
+  const [featureSheetVisible, setFeatureSheetVisible] = useState(false);
 
   // Step 2 - School info
   const [schoolName, setSchoolName] = useState('');
@@ -471,11 +488,14 @@ export default function SchoolRegistrationScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={100}>
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
           {step === 1 && (
-            <>
-              <SchoolTypeGrid options={INSTITUTION_OPTIONS} value={institutionTypeId} onChange={setInstitutionTypeId} />
-
-              <InstitutionFeaturePreview type={institutionType} />
-            </>
+            <SchoolTypeGrid
+              options={INSTITUTION_OPTIONS}
+              value={institutionTypeId}
+              onChange={(id) => {
+                setInstitutionTypeId(id);
+                setFeatureSheetVisible(true);
+              }}
+            />
           )}
 
           {step === 2 && (
@@ -690,6 +710,13 @@ export default function SchoolRegistrationScreen() {
         </View>
       </KeyboardAvoidingView>
 
+      <InstitutionFeatureSheet
+        visible={featureSheetVisible}
+        type={institutionType}
+        onClose={() => setFeatureSheetVisible(false)}
+        insetsBottom={insets.bottom}
+      />
+
       <KeyboardAwareModal visible={idSourceSheetVisible} transparent animationType="slide" onRequestClose={() => setIdSourceSheetVisible(false)}>
         <View style={sheet.backdrop}>
           <TouchableOpacity style={sheet.backdropTouch} activeOpacity={1} onPress={() => setIdSourceSheetVisible(false)} />
@@ -802,24 +829,6 @@ const emailCheck = StyleSheet.create({
 });
 
 const preview = StyleSheet.create({
-  hintCard: {
-    borderWidth: 1.5,
-    borderColor: BORDER,
-    borderStyle: 'dashed',
-    borderRadius: RADIUS.lg,
-    padding: 16,
-    marginTop: 16,
-  },
-  hintText: { fontSize: 13, color: SUBTLE, textAlign: 'center', lineHeight: 19 },
-  card: {
-    backgroundColor: COLORS.emeraldSoft,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(31,174,100,0.25)',
-    padding: 16,
-    marginTop: 16,
-  },
-  tagline: { fontSize: 12.5, fontWeight: '600', color: BRAND.emeraldDeep, marginBottom: 8 },
   title: { fontSize: 13.5, fontWeight: '800', color: INK, marginBottom: 10 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   rowText: { flex: 1, fontSize: 13, color: INK, lineHeight: 18 },
@@ -828,14 +837,15 @@ const preview = StyleSheet.create({
 const typeCard = StyleSheet.create({
   label: { fontSize: 12.5, fontWeight: '600', color: SUBTLE, marginBottom: 8 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  wrap: { width: '48%' },
+  // Shadow (elevation, on Android) stays on this outer wrapper, never on the
+  // clipped gradient card below it - see SchoolTypeCard's doc comment.
+  wrap: { width: '48%', borderRadius: RADIUS.lg, ...SHADOW.level1 },
   card: {
     minHeight: 150,
     borderRadius: RADIUS.lg,
     padding: 16,
     justifyContent: 'space-between',
     overflow: 'hidden',
-    ...SHADOW.level1,
   },
   cardSelected: { borderWidth: 3, borderColor: '#FFFFFF' },
   badge: {
