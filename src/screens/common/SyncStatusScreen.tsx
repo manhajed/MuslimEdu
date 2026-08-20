@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useOfflineQueue } from '../../context/OfflineQueueContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
-import { RADIUS } from '../../theme/glass';
+import { COLORS, RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
 import BottomNavBar from '../../components/BottomNavBar';
 import { scanCachedDatasets, formatBytes, CachedDataset } from '../../utils/syncStatus';
@@ -113,8 +113,8 @@ export default function SyncStatusScreen() {
       </View>
 
       <View style={styles.connectionBanner}>
-        <View style={[styles.connectionDot, { backgroundColor: ICON_INK }]} />
-        <Text style={styles.connectionText}>
+        <View style={[styles.connectionDot, { backgroundColor: isOnline ? COLORS.emerald : COLORS.danger }]} />
+        <Text style={[styles.connectionText, { color: isOnline ? COLORS.emerald : COLORS.danger }]}>
           {isOnline ? t('sync_status.online', 'Online') : t('sync_status.offline', 'Offline')}
         </Text>
         {actions.length > 0 ? (
@@ -224,11 +224,8 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     backButton: { width: 32 },
     headerSpacer: { width: 32 },
 
-    // Fully-rounded pill, not just a rounded rectangle - the app's own
-    // "state" affordance elsewhere (status pills on SubscriptionStatusCard,
-    // badges) is always a true pill; this banner is the same idea scaled up.
-    // No tinted fill (monochrome pass) - a hairline border keeps it legible
-    // as its own row on the canvas background.
+    // No card/fill at all - just the dot + label sitting directly on the
+    // canvas background, colored by state (emerald online / danger offline).
     connectionBanner: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -237,12 +234,9 @@ const makeStyles = (theme: AcademicGlassTheme) =>
       paddingVertical: 12,
       paddingHorizontal: 16,
       borderRadius: RADIUS.pill,
-      backgroundColor: theme.surface,
-      borderWidth: 1,
-      borderColor: theme.border,
     },
     connectionDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-    connectionText: { fontSize: 14, fontWeight: '700', flex: 1, color: ICON_INK },
+    connectionText: { fontSize: 14, fontWeight: '700', flex: 1 },
     syncNowBtn: { backgroundColor: theme.accent, borderRadius: RADIUS.pill, paddingHorizontal: 14, paddingVertical: 7, minWidth: 80, alignItems: 'center' },
     syncNowText: { fontSize: 12, fontWeight: '700', color: theme.onAccent },
 
@@ -269,16 +263,13 @@ const makeStyles = (theme: AcademicGlassTheme) =>
     },
     emptyText: { fontSize: 12.5, color: theme.textSecondary, lineHeight: 18 },
 
-    // Plain surface row (no per-category tint/border) - the icon square's
-    // own color is the only wayfinding now, not the whole card.
+    // No card fill/border - rows sit directly on the canvas background,
+    // separated by the gap between them rather than a surface each.
     itemCard: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
-      backgroundColor: theme.surface,
       borderRadius: RADIUS.lg,
-      borderWidth: 1,
-      borderColor: theme.border,
       padding: 12,
     },
     itemIconWrap: {
