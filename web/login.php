@@ -302,22 +302,6 @@
   .sheet-note { font-size: 11.5px; color: var(--text-3); margin-top: 10px; line-height: 16px; display: none; }
   .sheet-note.show { display: block; }
 
-  /* ── SESSION (signed-in) PANEL ── */
-  .session-avatar {
-    width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 14px;
-    background: var(--accent-ghost); border: 1.5px solid var(--accent-border);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 24px; font-weight: 800; color: var(--accent);
-  }
-  .session-name { font-size: 19px; font-weight: 800; color: var(--text-1); }
-  .session-email { font-size: 13px; color: var(--text-2); margin-top: 4px; }
-  .session-role {
-    display: inline-flex; margin-top: 12px; padding: 6px 14px; border-radius: 100px;
-    background: var(--accent-ghost); border: 1px solid var(--accent-border);
-    font-size: 11.5px; font-weight: 800; color: var(--accent);
-    letter-spacing: 0.4px; text-transform: uppercase;
-  }
-
   /* ── TOAST ── */
   .toast {
     position: absolute; left: 50%; bottom: 28px; z-index: 40;
@@ -430,40 +414,6 @@
       </div>
     </div>
 
-    <!-- ═══ STEP 3 — TWO FACTOR ═══ -->
-    <div class="panel" id="panel3" style="display:none;">
-      <div class="hero">
-        <div class="hero-title">One more<br/><span class="accent">step.</span></div>
-        <div class="hero-subtitle-row" style="margin-top:8px;">Enter the code from your authenticator app.</div>
-      </div>
-
-      <div class="card">
-        <div class="field-label">AUTHENTICATION CODE</div>
-        <div class="input-row">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="#1A7A6E" stroke-width="1.7"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#1A7A6E" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="16" r="1" fill="#1A7A6E"/></svg>
-          <input type="text" id="twoFactorInput" placeholder="6-digit code or recovery code" style="text-transform:uppercase;" />
-        </div>
-        <div class="helper-text">Open your authenticator app for the current code, or use one of your saved recovery codes if you've lost access to it.</div>
-        <div class="error-text" id="twoFactorError">That code didn't work. Try again.</div>
-        <button class="gradient-btn" id="verifyBtn" disabled><span class="spinner"></span><span id="verifyBtnLabel">Verify</span></button>
-      </div>
-    </div>
-
-    <!-- ═══ STEP 4 — SIGNED IN (restored/completed session) ═══ -->
-    <div class="panel" id="panel4" style="display:none;">
-      <div class="hero" style="margin-top:40px;">
-        <div class="hero-title" style="font-size:26px;line-height:31px;text-align:center;">Signed in</div>
-      </div>
-
-      <div class="card" style="text-align:center;">
-        <div class="session-avatar" id="sessionAvatar"></div>
-        <div class="session-name" id="sessionName"></div>
-        <div class="session-email" id="sessionEmail"></div>
-        <div class="session-role" id="sessionRole"></div>
-        <button class="gradient-btn" id="logoutBtn" style="margin-top:22px;"><span class="spinner"></span><span id="logoutBtnLabel">Log Out</span></button>
-      </div>
-    </div>
-
   </div>
 
   <div class="footer" id="pageFooter">
@@ -491,7 +441,7 @@
       <h3>Get Started</h3>
       <div class="sheet-subtitle">Choose how you'd like to join MuslimEdu.</div>
 
-      <a class="sheet-option" href="register.html" style="text-decoration:none;">
+      <a class="sheet-option" href="register.php" style="text-decoration:none;">
         <div class="sheet-option-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3 10l9-5 9 5-9 5-9-5z" stroke="#1A7A6E" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 12v5c0 1 2.2 2 5 2s5-1 5-2v-5" stroke="#1A7A6E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>

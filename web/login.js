@@ -3,26 +3,31 @@ const API_BASE_URL = 'https://manhaje.com/apps/api';
 const ENDPOINTS = {
   login: API_BASE_URL + '/login',
   me: API_BASE_URL + '/me',
-  logout: API_BASE_URL + '/logout',
 };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Mirrors saveToken/getStoredToken/clearToken (Keychain on native).
 // "Remember me" picks which storage backs the session: localStorage
 // survives closing the tab, sessionStorage clears with it.
 const TOKEN_KEY = 'muslimedu_auth_token';
-// Auto-logout after this much inactivity on the signed-in panel. A stolen
-// token in localStorage/sessionStorage (the XSS risk a browser can't avoid
-// the way a native Keychain does) is only useful while it's both valid AND
-// sitting in storage - this bounds how long an abandoned, unlocked tab
-// stays a live session.
-const IDLE_LOGOUT_MS = 15 * 60 * 1000;
+
+// Two-factor accounts aren't supported on the web yet - deliberately not
+// part of this page's logic (see dashboard.js's guardDashboard for the
+// per-role landing pages this redirects to once real login succeeds).
+const DASHBOARD_BY_ROLE = {
+  admin: 'admin-dashboard.php',
+  superadmin: 'superadmin-dashboard.php',
+  teacher: 'teacher-dashboard.php',
+  student: 'student-dashboard.php',
+};
+function dashboardUrlForRole(role) {
+  return DASHBOARD_BY_ROLE[role] || 'placeholder-dashboard.php';
+}
 
 let step = 1;
 let rememberMe = false;
 let secure = true;
 let currentEmail = '';
 let currentPassword = '';
-let idleTimer = null;
 
 function getStoredToken() {
   return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
@@ -48,7 +53,6 @@ function clearEmailError() {
 }
 function clearLoginError() {
   document.getElementById('loginError').classList.remove('show');
-  document.getElementById('twoFactorError').classList.remove('show');
 }
 function setError(id, message) {
   const el = document.getElementById(id);
@@ -67,30 +71,23 @@ function switchPanel(newStep, direction) {
   const topbar1 = document.getElementById('topbarStep1');
   const topbarOther = document.getElementById('topbarStepOther');
   const pill = document.getElementById('stepPillText');
-  const footer = document.getElementById('pageFooter');
 
   if (newStep === 1) {
     topbar1.style.display = 'flex';
     topbarOther.style.display = 'none';
     pill.textContent = 'STEP 1 OF 2';
-  } else if (newStep === 4) {
-    topbar1.style.display = 'flex';
-    topbarOther.style.display = 'none';
-    pill.textContent = 'SIGNED IN';
   } else {
     topbar1.style.display = 'none';
     topbarOther.style.display = 'flex';
-    document.getElementById('topbarOtherTitle').textContent = newStep === 3 ? "Verify it's you" : 'Sign in';
-    pill.textContent = newStep === 3 ? 'TWO-FACTOR' : 'STEP 2 OF 2';
+    document.getElementById('topbarOtherTitle').textContent = 'Sign in';
+    pill.textContent = 'STEP 2 OF 2';
   }
 
   document.getElementById('dot1').classList.toggle('active', newStep === 1);
   document.getElementById('dot2').classList.toggle('active', newStep === 2);
-  footer.style.display = newStep === 1 || newStep === 4 ? '' : 'none';
 
   document.getElementById('bodyScroll').scrollTo({ top: 0, behavior: 'smooth' });
   step = newStep;
-  updateIdleWatch();
 }
 
 function goToStep2() {
@@ -111,13 +108,7 @@ function goToStep1() {
 }
 
 function handleBack() {
-  if (step === 3) {
-    document.getElementById('twoFactorInput').value = '';
-    clearLoginError();
-    switchPanel(2, -1);
-  } else {
-    goToStep1();
-  }
+  goToStep1();
 }
 
 function togglePassword() {
@@ -141,114 +132,46 @@ function updateSubmitState() {
   document.getElementById('loginBtn').disabled = !(email.length > 0 && pw.length > 0);
 }
 
-function updateTwoFactorState() {
-  const code = document.getElementById('twoFactorInput').value.trim();
-  document.getElementById('verifyBtn').disabled = code.length === 0;
-}
-
 function handleSubmit() {
   const btn = document.getElementById('loginBtn');
-  if (btn.disabled) return;
+  if (btn.disabled || btn.classList.contains('loading')) return;
   currentPassword = document.getElementById('passwordInput').value;
-  submitLogin(btn, 'loginBtnLabel', 'Log In', null);
-}
 
-function handleSubmitTwoFactor() {
-  const btn = document.getElementById('verifyBtn');
-  if (btn.disabled) return;
-  const code = document.getElementById('twoFactorInput').value.trim();
-  submitLogin(btn, 'verifyBtnLabel', 'Verify', code);
-}
-
-// POST /login — email+password, then again with two_factor_code once the
-// server flags the account as requiring it. Mirrors authService.loginRequest.
-function submitLogin(btn, labelId, idleLabel, twoFactorCode) {
-  const label = document.getElementById(labelId);
+  const label = document.getElementById('loginBtnLabel');
   btn.classList.add('loading');
   btn.disabled = true;
   label.textContent = 'Please wait…';
   clearLoginError();
 
-  const body = {
-    email: currentEmail,
-    password: currentPassword,
-    device_name: 'muslimedu-web',
-  };
-  if (twoFactorCode) body.two_factor_code = twoFactorCode;
-
   fetch(ENDPOINTS.login, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ email: currentEmail, password: currentPassword, device_name: 'muslimedu-web' }),
   })
     .then(res => res.json().catch(() => ({})).then(data => ({ res, data })))
     .then(({ res, data }) => {
+      // Two-factor isn't wired up on the web - tell the account holder
+      // plainly instead of silently failing or crashing on a step that
+      // no longer exists here.
       if (res.ok && data && data.requires_two_factor) {
-        switchPanel(3, 1);
-        setTimeout(() => document.getElementById('twoFactorInput').focus(), 100);
+        setError('loginError', 'This account has two-factor authentication enabled, which isn’t supported on the web yet. Please sign in from the MuslimEdu app.');
         return;
       }
       if (!res.ok) {
-        setError(twoFactorCode ? 'twoFactorError' : 'loginError', data && data.message ? data.message : 'Login failed.');
+        setError('loginError', (data && data.message) || 'Login failed.');
         return;
       }
       saveToken(data.token);
-      // The password only exists in memory to authenticate this request -
-      // nothing past this point needs it, so drop it immediately rather
-      // than leaving it sitting in a JS variable for the rest of the tab's
-      // life.
-      currentPassword = '';
-      document.getElementById('passwordInput').value = '';
-      renderSession(data.user);
+      window.location.href = dashboardUrlForRole(data.user.role);
     })
     .catch(() => {
-      setError(
-        twoFactorCode ? 'twoFactorError' : 'loginError',
-        'Could not reach the server. Check your internet connection.',
-      );
+      setError('loginError', 'Could not reach the server. Check your internet connection.');
     })
     .finally(() => {
       btn.classList.remove('loading');
-      label.textContent = idleLabel;
+      label.textContent = 'Log In';
       updateSubmitState();
-      updateTwoFactorState();
     });
-}
-
-// ── Signed-in panel ─────────────────────────────────────────────
-function renderSession(user) {
-  document.getElementById('sessionAvatar').textContent = (user.name || '?').trim().charAt(0).toUpperCase();
-  document.getElementById('sessionName').textContent = user.name;
-  document.getElementById('sessionEmail').textContent = user.email;
-  document.getElementById('sessionRole').textContent = user.role;
-  switchPanel(4, 1);
-}
-
-function handleLogout() {
-  const btn = document.getElementById('logoutBtn');
-  const label = document.getElementById('logoutBtnLabel');
-  const token = getStoredToken();
-  btn.classList.add('loading');
-  btn.disabled = true;
-  label.textContent = 'Please wait…';
-
-  const finish = () => {
-    clearStoredToken();
-    currentEmail = '';
-    currentPassword = '';
-    document.getElementById('emailInput').value = '';
-    document.getElementById('passwordInput').value = '';
-    btn.classList.remove('loading');
-    btn.disabled = false;
-    label.textContent = 'Log Out';
-    switchPanel(1, -1);
-  };
-
-  if (!token) { finish(); return; }
-  fetch(ENDPOINTS.logout, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: 'Bearer ' + token },
-  }).then(finish).catch(finish);
 }
 
 function openSheet() {
@@ -257,20 +180,6 @@ function openSheet() {
 function closeSheet() {
   document.getElementById('modalBackdrop').classList.remove('open');
 }
-
-// ── Idle auto-logout while signed in (see IDLE_LOGOUT_MS above) ────
-function updateIdleWatch() {
-  clearTimeout(idleTimer);
-  if (step === 4) {
-    idleTimer = setTimeout(() => {
-      showToast('Signed out after inactivity');
-      handleLogout();
-    }, IDLE_LOGOUT_MS);
-  }
-}
-['mousemove', 'keydown', 'click', 'touchstart', 'scroll'].forEach(evt =>
-  document.addEventListener(evt, () => { if (step === 4) updateIdleWatch(); }, { passive: true }),
-);
 
 // ── Wire up all interactive elements (CSP script-src 'self' blocks
 //    inline onclick/oninput attributes, so everything binds here) ──
@@ -293,13 +202,6 @@ function wireUp() {
   document.getElementById('forgotText').addEventListener('click', () => showToast('Reset link sent — coming soon'));
   document.getElementById('loginBtn').addEventListener('click', handleSubmit);
 
-  const twoFactorInput = document.getElementById('twoFactorInput');
-  twoFactorInput.addEventListener('input', () => { clearLoginError(); updateTwoFactorState(); });
-  twoFactorInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleSubmitTwoFactor(); });
-  document.getElementById('verifyBtn').addEventListener('click', handleSubmitTwoFactor);
-
-  document.getElementById('logoutBtn').addEventListener('click', handleLogout);
-
   document.querySelectorAll('.footer-noop').forEach(a => a.addEventListener('click', e => e.preventDefault()));
 
   const modalBackdrop = document.getElementById('modalBackdrop');
@@ -307,7 +209,8 @@ function wireUp() {
   document.getElementById('sheetHandleZone').addEventListener('click', closeSheet);
   document.getElementById('alumniOption').addEventListener('click', () => document.getElementById('alumniNote').classList.add('show'));
 
-  // ── On load: restore session, same as AuthContext's launch check ──
+  // ── On load: already signed in -> go straight to the right dashboard,
+  //    same as AuthContext's launch check deciding "skip login" on native. ──
   const token = getStoredToken();
   if (!token) return;
   fetch(ENDPOINTS.me, {
@@ -318,7 +221,7 @@ function wireUp() {
       if (!res.ok) throw new Error('invalid session');
       return res.json();
     })
-    .then(data => renderSession(data.user))
+    .then(data => { window.location.href = dashboardUrlForRole(data.user.role); })
     .catch(() => clearStoredToken());
 }
 

@@ -1,0 +1,258 @@
+/* Shared design system for every role dashboard — colors/measurements
+   pulled directly from src/screens/dashboards/{DashboardShell,AdminDashboard,
+   TeacherDashboard,StudentDashboard,SuperAdminDashboard}.tsx so the web
+   dashboards read as the same screens, not a re-skin. */
+:root {
+  --emerald: #1FAE64;
+  --emerald-deep: #0F7A3D; /* hero-card bg — WCAG AA vs white text, see AdminDashboard comment */
+  --emerald-soft: #E5F8F5;
+  --pale-green: #7FD9A8;
+  --ink: #1C1C1E;
+  --subtle: #8E8E93;
+  --hero-top: #1C1C1E;
+  --hero-bottom: #000000;
+  --glass-bg: rgba(255,255,255,0.07);
+  --glass-border: rgba(255,255,255,0.14);
+  --glass-icon-bg: rgba(255,255,255,0.08);
+  --card-border: rgba(17,24,39,0.06);
+  --shadow: 0 4px 10px rgba(11,61,46,0.05);
+}
+* , *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #FFFFFF;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+button { cursor: pointer; border: none; background: none; font-family: inherit; }
+a { text-decoration: none; color: inherit; }
+
+.screen { max-width: 480px; margin: 0 auto; min-height: 100vh; background: #FFFFFF; position: relative; }
+
+/* ── Dark parallax hero ── */
+.hero-bg {
+  position: absolute; top: 0; left: 0; right: 0;
+  background: linear-gradient(160deg, var(--hero-top), var(--hero-bottom));
+  border-bottom-left-radius: 36px; border-bottom-right-radius: 36px;
+  z-index: 0;
+}
+.hero-glow {
+  position: absolute; top: -60px; right: -60px; width: 220px; height: 220px;
+  background: radial-gradient(circle, rgba(31,174,100,0.35) 0%, rgba(31,174,100,0) 70%);
+  pointer-events: none;
+}
+.header-row {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px 20px 22px;
+}
+.greeting-small { font-size: 14px; color: var(--pale-green); font-weight: 600; }
+.greeting-name { font-size: 26px; font-weight: 800; color: #fff; margin-top: 4px; letter-spacing: -0.3px; }
+.role-badge {
+  display: inline-block; margin-top: 9px; padding: 4px 10px; border-radius: 100px;
+  background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.22);
+  font-size: 10.5px; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 0.6px;
+}
+.header-right { display: flex; align-items: center; gap: 10px; }
+.icon-btn {
+  width: 38px; height: 38px; border-radius: 19px;
+  background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.22);
+  display: flex; align-items: center; justify-content: center; color: #fff;
+}
+.avatar-wrap { position: relative; }
+.avatar, .avatar-fallback {
+  width: 52px; height: 52px; border-radius: 26px;
+  border: 2px solid rgba(255,255,255,0.5);
+  display: flex; align-items: center; justify-content: center;
+  object-fit: cover;
+}
+.avatar-fallback { background: rgba(255,255,255,0.92); color: var(--emerald); font-size: 19px; font-weight: 800; }
+.avatar-edit-badge {
+  position: absolute; bottom: -2px; right: -2px; width: 22px; height: 22px; border-radius: 11px;
+  background: #fff; border: 1.5px solid var(--emerald-soft);
+  display: flex; align-items: center; justify-content: center; color: var(--emerald);
+}
+
+/* ── Glass profile card (Teacher/Student — translucent over dark hero) ── */
+.glass-card {
+  position: relative; z-index: 1; margin: 0 20px 0;
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: 22px; padding: 18px;
+}
+.glass-header-row { display: flex; align-items: center; justify-content: space-between; }
+.glass-header-left { display: flex; align-items: center; gap: 12px; }
+.glass-icon-circle {
+  width: 44px; height: 44px; border-radius: 22px;
+  background: var(--glass-icon-bg); border: 1px solid var(--glass-border);
+  display: flex; align-items: center; justify-content: center; color: var(--pale-green);
+  flex-shrink: 0; overflow: hidden;
+}
+.glass-title { font-size: 15px; font-weight: 700; color: #fff; }
+.glass-subtitle { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+.edit-btn {
+  width: 32px; height: 32px; border-radius: 16px;
+  background: var(--glass-icon-bg); border: 1px solid var(--glass-border);
+  display: flex; align-items: center; justify-content: center; color: var(--pale-green);
+}
+.glass-divider { height: 1px; background: var(--glass-border); margin: 14px 0; }
+.glass-row { display: flex; align-items: center; gap: 10px; }
+.glass-row-icon { color: rgba(255,255,255,0.5); flex-shrink: 0; }
+.glass-row-label { font-size: 11px; color: rgba(255,255,255,0.55); }
+.glass-row-value { font-size: 14px; color: #fff; font-weight: 600; margin-top: 1px; word-break: break-word; }
+
+/* ── White body panel riding up over the hero ── */
+.body {
+  position: relative; z-index: 1;
+  background: #fff; border-top-left-radius: 28px; border-top-right-radius: 28px;
+  margin-top: 22px; padding: 26px 20px 60px;
+}
+.section-label {
+  font-size: 13px; color: var(--subtle); margin-bottom: 14px;
+  text-transform: uppercase; letter-spacing: 1px; font-weight: 700;
+}
+.section-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.view-all { display: flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 700; color: var(--emerald); }
+
+/* ── Search bar ── */
+.search-bar {
+  display: flex; align-items: center; gap: 8px;
+  background: #EFEFF1; border-radius: 14px; padding: 0 14px; height: 44px; margin-bottom: 18px;
+  color: var(--subtle);
+}
+.search-bar input {
+  flex: 1; border: none; outline: none; background: transparent; font-size: 15.5px; color: var(--ink); height: 100%;
+}
+.search-bar input::placeholder { color: var(--subtle); }
+.search-clear { display: none; color: var(--subtle); }
+.search-bar.has-value .search-clear { display: flex; }
+
+/* ── Hero action card (dark green, featured) ── */
+.hero-card {
+  background: var(--emerald-deep); border-radius: 26px; padding: 20px; margin-bottom: 12px;
+  display: block; width: 100%; text-align: left;
+}
+.hero-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
+.hero-card-icon {
+  width: 48px; height: 48px; border-radius: 14px; background: rgba(255,255,255,0.18);
+  display: flex; align-items: center; justify-content: center; color: #fff;
+}
+.hero-card-arrow {
+  width: 40px; height: 40px; border-radius: 20px; background: rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center; color: #fff;
+}
+.hero-card-title { font-size: 21px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+.hero-card-desc { font-size: 13.5px; color: rgba(255,255,255,0.88); line-height: 1.4; }
+
+/* ── Secondary bento row (2 cards) ── */
+.secondary-row { display: flex; gap: 12px; margin-bottom: 28px; }
+.secondary-card {
+  flex: 1; background: #fff; border-radius: 20px; border: 1px solid var(--card-border);
+  padding: 15px; box-shadow: var(--shadow); text-align: left; display: block;
+}
+.secondary-icon {
+  width: 38px; height: 38px; border-radius: 12px; margin-bottom: 12px;
+  display: flex; align-items: center; justify-content: center; color: #fff;
+}
+.secondary-title { font-size: 14.5px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
+.secondary-desc { font-size: 11.5px; color: var(--subtle); line-height: 1.3; }
+.secondary-num { font-size: 18px; font-weight: 800; color: var(--ink); margin-bottom: 4px; display: block; }
+.ring-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+
+/* ── Grouped settings-style lists ── */
+.group-section { margin-bottom: 22px; }
+.group-label {
+  font-size: 12px; color: var(--subtle); margin: 0 0 8px 4px;
+  text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700;
+}
+.group-card { background: #fff; border-radius: 18px; border: 1px solid var(--card-border); overflow: hidden; }
+.row {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; width: 100%; text-align: left;
+}
+.row + .row { border-top: 1px solid var(--card-border); }
+.row-icon {
+  width: 38px; height: 38px; border-radius: 12px; background: var(--emerald-soft); color: var(--emerald);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.row-text { flex: 1; min-width: 0; }
+.row-title { font-size: 14.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row-desc { font-size: 12px; color: var(--subtle); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row-chevron { color: var(--subtle); flex-shrink: 0; }
+.no-results { text-align: center; color: var(--subtle); font-size: 14px; padding: 36px 0; }
+
+/* ── Stat row (SuperAdmin) ── */
+.stats-row { display: flex; gap: 10px; margin-bottom: 20px; }
+.stat-box { flex: 1; background: var(--emerald-soft); border-radius: 14px; padding: 12px; text-align: center; }
+.stat-value { font-size: 18px; font-weight: 800; color: var(--emerald); }
+.stat-label { font-size: 10.5px; color: var(--ink); margin-top: 2px; }
+
+/* ── 2-col grid (SuperAdmin) ── */
+.grid-2 { display: flex; flex-wrap: wrap; gap: 14px; }
+.grid-card {
+  width: calc(50% - 7px); background: #fff; border-radius: 18px; border: 1px solid #EDEEF0;
+  padding: 16px; box-shadow: var(--shadow); text-align: left;
+}
+.grid-card-icon {
+  width: 44px; height: 44px; border-radius: 12px; background: var(--emerald-soft); color: var(--emerald);
+  display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
+}
+.grid-card-title { font-size: 14.5px; font-weight: 700; color: var(--ink); }
+.grid-card-desc { font-size: 12px; color: var(--subtle); margin-top: 4px; line-height: 1.35; }
+.grid-card-arrow { margin-top: 12px; color: var(--emerald); }
+
+/* ── Quick action grid (Teacher/Student — 2 columns) ── */
+.quick-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+.quick-card {
+  width: calc(50% - 6px); border-radius: 18px; padding: 15px; text-align: left;
+  background: #fff; border: 1px solid var(--card-border); box-shadow: var(--shadow); position: relative;
+}
+.quick-card.solid { background: var(--emerald); border-color: var(--emerald); }
+.quick-card-icon {
+  width: 38px; height: 38px; border-radius: 12px; background: var(--emerald-soft); color: var(--emerald);
+  display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
+}
+.quick-card.solid .quick-card-icon { background: rgba(255,255,255,0.2); color: #fff; }
+.quick-card-title { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+.quick-card.solid .quick-card-title { color: #fff; }
+.quick-card-desc { font-size: 11px; color: var(--subtle); margin-top: 3px; line-height: 1.35; }
+.quick-card.solid .quick-card-desc { color: rgba(255,255,255,0.85); }
+
+/* ── Placeholder ("coming soon") dashboard ── */
+.placeholder-center { display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 60px; text-align: center; }
+.placeholder-title { font-size: 18px; font-weight: 600; color: var(--ink); margin-bottom: 8px; text-transform: capitalize; }
+.placeholder-subtitle { font-size: 14px; color: var(--subtle); padding: 0 24px; line-height: 1.5; }
+
+/* ── Log out card (footer, every dashboard) ── */
+.logout-card {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  background: #FEF2F2; border: 1px solid rgba(217,83,79,0.18); border-radius: 18px; padding: 14px; margin-top: 8px;
+}
+.logout-icon-badge {
+  width: 40px; height: 40px; border-radius: 20px; background: rgba(217,83,79,0.12); color: #D9534F;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.logout-title { font-size: 15px; font-weight: 700; color: #D9534F; }
+.logout-subtitle { font-size: 12.5px; color: var(--subtle); margin-top: 2px; }
+
+/* ── Loading / auth-guard splash ── */
+.route-guard-splash {
+  position: fixed; inset: 0; background: #000; display: flex; align-items: center; justify-content: center; z-index: 500;
+}
+.route-guard-spinner {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.2); border-top-color: var(--emerald);
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Toast (for not-yet-wired items) ── */
+.toast {
+  position: fixed; left: 50%; bottom: 28px; z-index: 40; transform: translate(-50%, 16px);
+  background: var(--ink); color: #fff; padding: 11px 18px; border-radius: 100px;
+  font-size: 13px; font-weight: 700; opacity: 0; pointer-events: none; transition: all 0.25s ease;
+  max-width: 90%; text-align: center;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 380px) {
+  .quick-card, .grid-card { width: 100%; }
+}

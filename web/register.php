@@ -299,7 +299,7 @@
   <nav class="nav">
     <div class="container nav-inner">
       <span class="nav-logo">Muslim<span>Edu</span></span>
-      <a class="nav-back" href="login.html">← Back to Login</a>
+      <a class="nav-back" href="login.php">← Back to Login</a>
     </div>
   </nav>
 
