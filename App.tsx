@@ -1,8 +1,16 @@
-import '@/global.css';
+// Relative, not the `@/` alias: the alias only exists via
+// babel-plugin-module-resolver, so an `@/...` import here silently fails to
+// resolve any time Metro transforms this file with a stale babel config (a
+// dev server started before a babel.config.js change keeps the old config
+// in its worker, leaving the import literal -> "Unable to resolve module
+// @/global.css"). The app entry point is the worst possible place to have
+// that dependency, and every other file in this codebase uses relative
+// imports anyway.
+import './src/global.css';
 import React from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
+import { GluestackUIProvider } from './src/components/ui/gluestack-ui-provider';
 import { AuthProvider } from './src/context/AuthContext';
 import { LocaleProvider } from './src/context/LocaleContext';
 import { OfflineQueueProvider } from './src/context/OfflineQueueContext';
