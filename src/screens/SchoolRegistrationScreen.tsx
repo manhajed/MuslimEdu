@@ -112,11 +112,11 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const STEP_LABELS = ['Type', 'School', 'Admin', 'Verify', 'Review'];
 
 const PASSWORD_RULES: { key: string; label: string; test: (pw: string) => boolean }[] = [
-  { key: 'length', label: 'At least 8 characters', test: (pw) => pw.length >= 8 },
-  { key: 'upper', label: 'One uppercase letter (A-Z)', test: (pw) => /[A-Z]/.test(pw) },
-  { key: 'lower', label: 'One lowercase letter (a-z)', test: (pw) => /[a-z]/.test(pw) },
-  { key: 'number', label: 'One number (0-9)', test: (pw) => /[0-9]/.test(pw) },
-  { key: 'special', label: 'One special character (!@#$...)', test: (pw) => /[^A-Za-z0-9]/.test(pw) },
+  { key: 'length', label: '8+ characters', test: (pw) => pw.length >= 8 },
+  { key: 'upper', label: 'an uppercase letter', test: (pw) => /[A-Z]/.test(pw) },
+  { key: 'lower', label: 'a lowercase letter', test: (pw) => /[a-z]/.test(pw) },
+  { key: 'number', label: 'a number', test: (pw) => /[0-9]/.test(pw) },
+  { key: 'special', label: 'a special character', test: (pw) => /[^A-Za-z0-9]/.test(pw) },
 ];
 const isPasswordStrong = (pw: string) => PASSWORD_RULES.every((rule) => rule.test(pw));
 
@@ -176,19 +176,31 @@ function RuleStatusIcon({ met, size = 14 }: { met: boolean; size?: number }) {
   );
 }
 
+// "a, b and c" instead of a comma-only list - reads as one sentence.
+function joinMissing(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? '';
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
+// One line instead of a 5-row checklist: states only what's still missing
+// ("kulang"), so it stays short and shrinks as the password improves.
 function PasswordStrengthChecklist({ password }: { password: string }) {
   if (!password) return null;
+  const missing = PASSWORD_RULES.filter((rule) => !rule.test(password)).map((rule) => rule.label);
+
+  if (missing.length === 0) {
+    return (
+      <View style={strength.row}>
+        <RuleStatusIcon met />
+        <Text style={strength.metText}>Meets all password requirements</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={strength.list}>
-      {PASSWORD_RULES.map((rule) => {
-        const met = rule.test(password);
-        return (
-          <View key={rule.key} style={strength.row}>
-            <RuleStatusIcon met={met} />
-            <Text style={[strength.ruleText, met && strength.ruleTextMet]}>{rule.label}</Text>
-          </View>
-        );
-      })}
+    <View style={strength.row}>
+      <RuleStatusIcon met={false} />
+      <Text style={strength.missingText}>Still needs {joinMissing(missing)}.</Text>
     </View>
   );
 }
@@ -904,10 +916,9 @@ const verify = StyleSheet.create({
 });
 
 const strength = StyleSheet.create({
-  list: { marginTop: 10, gap: 6 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  ruleText: { fontSize: 12.5, color: SUBTLE },
-  ruleTextMet: { color: INK, fontWeight: '600' },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 10 },
+  missingText: { flex: 1, fontSize: 12.5, color: SUBTLE, lineHeight: 18 },
+  metText: { flex: 1, fontSize: 12.5, color: INK, fontWeight: '600', lineHeight: 18 },
 });
 
 const emailCheck = StyleSheet.create({
