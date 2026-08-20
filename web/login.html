@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In — MuslimEdu</title>
+  <meta name="description" content="Sign in to MuslimEdu to manage your school, classes, and community." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%95%8C%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,500&family=Playfair+Display:ital,wght@1,600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* Same tokens as src/screens/LoginScreen.tsx (its own teal/mint palette,
+       deliberately separate from the app-wide BRAND green - see that
+       file's header comment). Kept 1:1 so this page reads as the same
+       screen, not a re-skin of it. */
+    :root {
+      --ink:           #0D1E1C;
+      --muted:         #3A5C58;
+      --faint:         #6B8C88;
+      --border:        rgba(13,30,28,0.1);
+      --canvas:        #E8F4F2;
+      --canvas-soft:   #F2FAF8;
+      --surface:       #F4FAFA;
+      --placeholder:   #9CA3AF;
+      --danger:        #D9534F;
+      --accent:        #1FAE64;
+      --accent-mid:    #0F7A3D;
+      --accent-light:  #4CAF50;
+      --accent-ghost:  rgba(31,174,100,0.08);
+      --accent-border: rgba(31,174,100,0.15);
+      --shadow-btn:    0 8px 24px rgba(31,174,100,0.30);
+      --silk:          cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--canvas-soft) 0%, var(--canvas) 100%);
+      display: flex;
+      justify-content: center;
+    }
+    button { cursor: pointer; border: none; background: none; font-family: inherit; }
+    input { font-family: inherit; }
+
+    .page { width: 100%; max-width: 460px; padding: 24px; display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* ── TOPBAR ── */
+    .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; min-height: 36px; }
+    .logo-badge {
+      width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--accent-light), var(--accent));
+      display: flex; align-items: center; justify-content: center; font-size: 16px;
+    }
+    .topbar-title { font-size: 15px; font-weight: 800; color: var(--ink); letter-spacing: -0.3px; }
+    .back-btn {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--surface); border: 1px solid var(--border); font-size: 16px; color: var(--ink);
+    }
+    .topbar-spacer { flex: 1; }
+    .lang-pill {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12.5px; font-weight: 700; color: var(--muted);
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 7px 12px; border-radius: 999px;
+    }
+
+    /* ── STEP PILL ── */
+    .step-pill {
+      align-self: flex-start; margin-top: 20px;
+      padding: 7px 14px; border-radius: 999px;
+      background: var(--ink); color: var(--accent-light);
+      font-size: 11px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase;
+    }
+
+    /* ── HERO ── */
+    .hero { margin-top: 16px; }
+    .hero-row { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+    .hero-text { flex: 1; }
+    .title { font-size: 34px; font-weight: 800; line-height: 1.15; letter-spacing: -0.5px; color: var(--ink); }
+    .title-compact { font-size: 27px; font-weight: 800; line-height: 1.2; letter-spacing: -0.4px; color: var(--ink); }
+    .title-green { color: var(--accent); }
+    .title-italic { color: var(--accent); font-family: 'Playfair Display', serif; font-style: italic; font-weight: 600; }
+    .subtitle-row { display: flex; flex-wrap: wrap; align-items: baseline; margin-top: 8px; gap: 4px; }
+    .subtitle { font-size: 15px; color: var(--muted); line-height: 1.4; }
+    .subtitle-green { font-size: 15px; color: var(--accent); font-weight: 700; }
+    .illustration {
+      width: 105px; height: 121px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 56px;
+      filter: drop-shadow(0 8px 16px rgba(31,174,100,0.18));
+    }
+    .email-chip {
+      display: inline-flex; align-items: center; gap: 8px; margin-top: 12px;
+      padding: 8px 14px; border-radius: 999px;
+      background: var(--accent-ghost); border: 1px solid var(--accent-border);
+      font-size: 13px; font-weight: 700; color: var(--accent);
+      max-width: 100%; overflow: hidden;
+    }
+    .email-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── CARD ── */
+    .card-outer { position: relative; margin-top: 20px; }
+    .hero-glow {
+      position: absolute; top: -40px; right: -30px; width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(31,174,100,0.28) 0%, rgba(31,174,100,0) 70%);
+      pointer-events: none; z-index: 0;
+    }
+    .card {
+      position: relative; z-index: 1;
+      border-radius: 28px; border: 1px solid rgba(255,255,255,0.6);
+      padding: 20px; background: var(--surface);
+      box-shadow: 0 8px 32px rgba(13,30,28,0.08);
+      animation: enter 0.32s var(--silk);
+    }
+    @keyframes enter { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+    .field-label { font-size: 12px; font-weight: 800; color: var(--faint); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+    .input-row {
+      display: flex; align-items: center; gap: 12px; height: 56px;
+      border-radius: 14px; border: 1.5px solid var(--border); background: var(--surface);
+      padding: 0 16px; transition: border-color 0.25s, background 0.25s;
+    }
+    .input-row:focus-within { border-color: var(--accent-mid); background: #FFFFFF; }
+    .input-row .icon { font-size: 17px; color: var(--accent); flex-shrink: 0; line-height: 1; }
+    .input-row input {
+      flex: 1; border: none; outline: none; background: transparent;
+      font-size: 16px; color: var(--ink); min-width: 0;
+    }
+    .input-row input::placeholder { color: var(--placeholder); }
+    .eye-btn { font-size: 17px; color: var(--muted); flex-shrink: 0; line-height: 1; padding: 4px; }
+
+    .helper-text { font-size: 12.5px; color: var(--faint); margin-top: 10px; line-height: 1.5; }
+    .error-text { color: var(--danger); font-size: 12.5px; font-weight: 600; margin-top: 8px; display: none; }
+    .error-text.show { display: block; }
+    .field-invalid { border-color: var(--danger) !important; }
+
+    .options-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+    .remember-row { display: flex; align-items: center; gap: 9px; }
+    .checkbox {
+      width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--border);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      transition: background 0.2s, border-color 0.2s; font-size: 12px; color: #fff;
+    }
+    .checkbox.checked { background: var(--accent); border-color: var(--accent); }
+    .remember-text { font-size: 13px; color: var(--ink); font-weight: 600; }
+    .forgot-text { font-size: 13px; color: var(--accent); font-weight: 800; cursor: default; }
+
+    .btn {
+      width: 100%; height: 56px; margin-top: 18px; border-radius: 999px;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      background: linear-gradient(135deg, var(--accent-light), var(--accent));
+      color: #fff; font-size: 16px; font-weight: 800;
+      box-shadow: var(--shadow-btn); transition: transform 0.2s, opacity 0.2s;
+    }
+    .btn:hover:not(:disabled) { transform: scale(1.01); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn .spinner {
+      width: 16px; height: 16px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff;
+      display: none; animation: spin 0.7s linear infinite;
+    }
+    .btn.loading .spinner { display: inline-block; }
+    .btn.loading .btn-label { opacity: 0.8; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .step-dots { display: flex; gap: 6px; justify-content: center; margin-top: 16px; }
+    .step-dot { width: 7px; height: 7px; border-radius: 3.5px; background: var(--border); transition: all 0.25s var(--silk); }
+    .step-dot.active { width: 24px; background: var(--ink); }
+
+    .get-started-row { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 16px; }
+    .get-started-muted { font-size: 13px; color: var(--faint); font-weight: 600; }
+    .get-started-link { font-size: 13px; color: var(--accent); font-weight: 800; }
+
+    /* ── SUCCESS / SESSION STATE ── */
+    .session-card { text-align: center; padding: 12px 4px 4px; }
+    .session-avatar {
+      width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 16px;
+      background: var(--accent-ghost); border: 1.5px solid var(--accent-border);
+      display: flex; align-items: center; justify-content: center; font-size: 26px; color: var(--accent); font-weight: 800;
+    }
+    .session-name { font-size: 19px; font-weight: 800; color: var(--ink); }
+    .session-meta { font-size: 13px; color: var(--muted); margin-top: 4px; }
+    .session-role {
+      display: inline-flex; margin-top: 12px; padding: 6px 14px; border-radius: 999px;
+      background: var(--accent-ghost); border: 1px solid var(--accent-border);
+      font-size: 11.5px; font-weight: 800; color: var(--accent); letter-spacing: 0.4px; text-transform: uppercase;
+    }
+    .session-logout { margin-top: 22px; }
+
+    /* ── SHEET ── */
+    .sheet-backdrop {
+      position: fixed; inset: 0; background: rgba(6,30,22,0.55);
+      display: none; align-items: flex-end; justify-content: center; z-index: 200;
+      animation: fadeIn 0.2s ease;
+    }
+    .sheet-backdrop.open { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .sheet {
+      width: 100%; max-width: 460px; background: var(--surface);
+      border-radius: 30px 30px 0 0; padding: 8px 20px 24px;
+      animation: slideUp 0.28s var(--silk);
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .sheet-handle-zone { display: flex; justify-content: center; padding: 12px 0 8px; }
+    .sheet-handle { width: 44px; height: 5px; border-radius: 2.5px; background: rgba(19,42,32,0.25); }
+    .sheet-title { font-size: 22px; font-weight: 800; color: var(--ink); margin-top: 6px; }
+    .sheet-subtitle { font-size: 14px; color: var(--muted); margin-top: 6px; margin-bottom: 22px; line-height: 1.45; }
+    .sheet-option {
+      display: flex; align-items: center; width: 100%; text-align: left;
+      border-radius: 18px; border: 1px solid var(--border); padding: 16px;
+      background: var(--surface); transition: background 0.2s, border-color 0.2s;
+    }
+    .sheet-option:hover { background: var(--accent-ghost); border-color: var(--accent-border); }
+    .sheet-option + .sheet-option { margin-top: 14px; }
+    .sheet-option-icon {
+      width: 50px; height: 50px; border-radius: 25px; flex-shrink: 0; margin-right: 14px;
+      background: var(--accent-ghost); display: flex; align-items: center; justify-content: center; font-size: 22px;
+    }
+    .sheet-option-text { flex: 1; padding-right: 10px; }
+    .sheet-option-title { font-size: 16px; font-weight: 800; color: var(--ink); }
+    .sheet-option-desc { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+    .sheet-option-chevron { font-size: 18px; color: var(--accent); flex-shrink: 0; }
+    .sheet-note { font-size: 11.5px; color: var(--faint); margin-top: 10px; padding: 0 2px; line-height: 1.5; display: none; }
+    .sheet-note.show { display: block; }
+
+    /* ── FOOTER ── */
+    .footer { margin-top: auto; padding-top: 28px; text-align: center; }
+    .footer-links { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; }
+    .footer-links a { font-size: 13px; font-weight: 600; color: #1F2937; text-decoration: none; }
+    .footer-sep { width: 1px; height: 12px; background: var(--border); margin: 0 9px; }
+    .footer-secondary { margin-top: 18px; }
+    .footer-copyright { font-size: 12.5px; color: var(--muted); margin-top: 18px; }
+
+    @media (max-width: 420px) {
+      .title { font-size: 29px; }
+      .illustration { width: 84px; height: 96px; font-size: 44px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- ── TOPBAR (step 1) ── -->
+    <div class="topbar" id="topbarStep1">
+      <div class="logo-badge">🕌</div>
+      <span class="topbar-title">MuslimEdu</span>
+      <div class="topbar-spacer"></div>
+      <span class="lang-pill">🌐 EN</span>
+    </div>
+    <!-- ── TOPBAR (step 2/3) ── -->
+    <div class="topbar" id="topbarStepN" style="display:none">
+      <button class="back-btn" id="backBtn" type="button" aria-label="Back">←</button>
+      <span class="topbar-title" id="topbarNTitle">Sign in</span>
+    </div>
+
+    <div class="step-pill" id="stepPill">STEP 1 OF 2</div>
+
+    <!-- ── STEP 1: EMAIL ── -->
+    <section id="step1">
+      <div class="hero-row">
+        <div class="hero-text">
+          <div class="title-compact">Peace be<br /><span class="title-italic">upon you!</span></div>
+          <div class="subtitle-row">
+            <span class="subtitle">Connect through </span>
+            <span class="subtitle-green">Education.</span>
+          </div>
+        </div>
+        <div class="illustration">🎓</div>
+      </div>
+
+      <div class="card-outer">
+        <div class="hero-glow"></div>
+        <div class="card">
+          <div class="field-label">E-MAIL</div>
+          <div class="input-row" id="emailRow">
+            <span class="icon">✉️</span>
+            <input type="email" id="emailInput" placeholder="your@email.com" autocomplete="email" autocapitalize="none" autocorrect="off" />
+          </div>
+          <div class="error-text" id="emailError">Please enter a valid email address.</div>
+          <div class="helper-text">We'll verify your account, then set up your password.</div>
+
+          <button class="btn" id="continueBtn" type="button">
+            <span class="spinner"></span>
+            <span class="btn-label">Continue</span>
+          </button>
+
+          <div class="step-dots"><span class="step-dot active"></span><span class="step-dot"></span></div>
+
+          <div class="get-started-row">
+            <span class="get-started-muted">New here?</span>
+            <button class="get-started-link" id="getStartedBtn" type="button">Get Started</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── STEP 2: PASSWORD ── -->
+    <section id="step2" style="display:none">
+      <div class="hero">
+        <div class="title">Welcome<br /><span class="title-green">back!</span></div>
+        <div class="email-chip"><span class="icon">✉️</span><span id="emailChipText"></span></div>
+      </div>
+
+      <div class="card-outer">
+        <div class="hero-glow"></div>
+        <div class="card">
+          <div class="field-label">PASSWORD</div>
+          <div class="input-row" id="passwordRow">
+            <span class="icon">🔒</span>
+            <input type="password" id="passwordInput" placeholder="Enter your password" autocomplete="current-password" autocapitalize="none" autocorrect="off" />
+            <button class="eye-btn" id="eyeBtn" type="button" aria-label="Toggle password visibility">👁️</button>
+          </div>
+
+          <div class="options-row">
+            <button class="remember-row" id="rememberBtn" type="button">
+              <span class="checkbox" id="rememberCheckbox"></span>
+              <span class="remember-text">Remember me</span>
+            </button>
+            <span class="forgot-text">Forgot password?</span>
+          </div>
+
+          <div class="error-text" id="passwordError"></div>
+
+          <button class="btn" id="loginBtn" type="button" disabled>
+            <span class="spinner"></span>
+            <span class="btn-label">Log In</span>
+          </button>
+
+          <div class="step-dots"><span class="step-dot"></span><span class="step-dot active"></span></div>
+
+          <div class="get-started-row">
+            <span class="get-started-muted">New here?</span>
+            <button class="get-started-link" id="getStartedBtn2" type="button">Get Started</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── STEP 3: TWO-FACTOR ── -->
+    <section id="step3" style="display:none">
+      <div class="hero">
+        <div class="title">One more<br /><span class="title-green">step.</span></div>
+        <div class="subtitle" style="margin-top:8px;">Enter the code from your authenticator app.</div>
+      </div>
+
+      <div class="card-outer">
+        <div class="hero-glow"></div>
+        <div class="card">
+          <div class="field-label">AUTHENTICATION CODE</div>
+          <div class="input-row" id="twoFactorRow">
+            <span class="icon">🔒</span>
+            <input type="text" id="twoFactorInput" placeholder="6-digit code or recovery code" autocapitalize="characters" autocorrect="off" />
+          </div>
+          <div class="helper-text">Open your authenticator app for the current code, or use one of your saved recovery codes if you've lost access to it.</div>
+
+          <div class="error-text" id="twoFactorError"></div>
+
+          <button class="btn" id="verifyBtn" type="button" disabled>
+            <span class="spinner"></span>
+            <span class="btn-label">Verify</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SESSION (already signed in) ── -->
+    <section id="sessionView" style="display:none">
+      <div class="card-outer" style="margin-top:60px;">
+        <div class="hero-glow"></div>
+        <div class="card session-card">
+          <div class="session-avatar" id="sessionAvatar"></div>
+          <div class="session-name" id="sessionName"></div>
+          <div class="session-meta" id="sessionEmail"></div>
+          <div class="session-role" id="sessionRole"></div>
+          <button class="btn session-logout" id="logoutBtn" type="button">
+            <span class="spinner"></span>
+            <span class="btn-label">Log Out</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer">
+      <div class="footer-links">
+        <a href="#">Product</a><span class="footer-sep"></span>
+        <a href="#">How It Works</a><span class="footer-sep"></span>
+        <a href="#">Manhaj</a><span class="footer-sep"></span>
+        <a href="#">Resources</a><span class="footer-sep"></span>
+        <a href="#">FAQ</a><span class="footer-sep"></span>
+        <a href="#">Guidelines</a>
+      </div>
+      <div class="footer-links footer-secondary">
+        <a href="#">Privacy Statement</a><span class="footer-sep"></span>
+        <a href="#">Terms</a>
+      </div>
+      <div class="footer-copyright">© 2026 MuslimEdu. All rights reserved.</div>
+    </div>
+  </div>
+
+  <!-- ── GET STARTED SHEET ── -->
+  <div class="sheet-backdrop" id="sheetBackdrop">
+    <div class="sheet">
+      <div class="sheet-handle-zone"><div class="sheet-handle"></div></div>
+      <div class="sheet-title">Get Started</div>
+      <div class="sheet-subtitle">Choose how you'd like to join MuslimEdu.</div>
+
+      <a class="sheet-option" href="register.html">
+        <span class="sheet-option-icon">🏫</span>
+        <span class="sheet-option-text">
+          <span class="sheet-option-title" style="display:block;">Register Your School</span>
+          <span class="sheet-option-desc" style="display:block;">Create and manage your institution with MuslimEdu.</span>
+        </span>
+        <span class="sheet-option-chevron">→</span>
+      </a>
+
+      <button class="sheet-option" id="alumniOption" type="button">
+        <span class="sheet-option-icon">🎓</span>
+        <span class="sheet-option-text">
+          <span class="sheet-option-title" style="display:block;">Create Alumni Account</span>
+          <span class="sheet-option-desc" style="display:block;">Reconnect with your school and alumni community.</span>
+        </span>
+        <span class="sheet-option-chevron">→</span>
+      </button>
+      <div class="sheet-note" id="alumniNote">Alumni registration page isn't built yet on the web — coming soon.</div>
+    </div>
+  </div>
+
+  <script>
+    // ── Real backend contract — same as src/services/authService.ts ────
+    var API_BASE_URL = 'https://manhaje.com/apps/api';
+    var ENDPOINTS = {
+      login: API_BASE_URL + '/login',
+      me: API_BASE_URL + '/me',
+      logout: API_BASE_URL + '/logout',
+    };
+    var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // Mirrors saveToken/getStoredToken/clearToken (Keychain on native).
+    // "Remember me" picks which storage backs the session: localStorage
+    // survives closing the tab, sessionStorage clears with it — same
+    // mental model as a native "remember me" toggle backing persistent
+    // vs. session-only storage.
+    var TOKEN_KEY = 'muslimedu_auth_token';
+
+    function getStoredToken() {
+      return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+    }
+    function saveToken(token, remember) {
+      (remember ? localStorage : sessionStorage).setItem(TOKEN_KEY, token);
+    }
+    function clearToken() {
+      localStorage.removeItem(TOKEN_KEY);
+      sessionStorage.removeItem(TOKEN_KEY);
+    }
+
+    // ── State ────────────────────────────────────────────────────────
+    var state = {
+      step: 1,
+      email: '',
+      password: '',
+      rememberMe: false,
+      twoFactorCode: '',
+      token: null,
+      user: null,
+    };
+
+    var els = {
+      topbarStep1: document.getElementById('topbarStep1'),
+      topbarStepN: document.getElementById('topbarStepN'),
+      topbarNTitle: document.getElementById('topbarNTitle'),
+      backBtn: document.getElementById('backBtn'),
+      stepPill: document.getElementById('stepPill'),
+      step1: document.getElementById('step1'),
+      step2: document.getElementById('step2'),
+      step3: document.getElementById('step3'),
+      sessionView: document.getElementById('sessionView'),
+      emailInput: document.getElementById('emailInput'),
+      emailError: document.getElementById('emailError'),
+      continueBtn: document.getElementById('continueBtn'),
+      emailChipText: document.getElementById('emailChipText'),
+      passwordInput: document.getElementById('passwordInput'),
+      eyeBtn: document.getElementById('eyeBtn'),
+      rememberBtn: document.getElementById('rememberBtn'),
+      rememberCheckbox: document.getElementById('rememberCheckbox'),
+      passwordError: document.getElementById('passwordError'),
+      loginBtn: document.getElementById('loginBtn'),
+      twoFactorInput: document.getElementById('twoFactorInput'),
+      twoFactorError: document.getElementById('twoFactorError'),
+      verifyBtn: document.getElementById('verifyBtn'),
+      sheetBackdrop: document.getElementById('sheetBackdrop'),
+      getStartedBtn: document.getElementById('getStartedBtn'),
+      getStartedBtn2: document.getElementById('getStartedBtn2'),
+      alumniOption: document.getElementById('alumniOption'),
+      alumniNote: document.getElementById('alumniNote'),
+      sessionAvatar: document.getElementById('sessionAvatar'),
+      sessionName: document.getElementById('sessionName'),
+      sessionEmail: document.getElementById('sessionEmail'),
+      sessionRole: document.getElementById('sessionRole'),
+      logoutBtn: document.getElementById('logoutBtn'),
+    };
+
+    function showStep(step) {
+      state.step = step;
+      els.step1.style.display = step === 1 ? '' : 'none';
+      els.step2.style.display = step === 2 ? '' : 'none';
+      els.step3.style.display = step === 3 ? '' : 'none';
+      els.sessionView.style.display = 'none';
+      els.topbarStep1.style.display = step === 1 ? 'flex' : 'none';
+      els.topbarStepN.style.display = step === 1 ? 'none' : 'flex';
+      els.topbarNTitle.textContent = step === 3 ? "Verify it's you" : 'Sign in';
+      els.stepPill.textContent = step === 3 ? 'TWO-FACTOR' : 'STEP ' + step + ' OF 2';
+      if (step === 2) {
+        els.emailChipText.textContent = state.email;
+        setTimeout(function () { els.passwordInput.focus(); }, 80);
+      }
+      if (step === 3) {
+        setTimeout(function () { els.twoFactorInput.focus(); }, 80);
+      }
+    }
+
+    // ── Step 1: email ───────────────────────────────────────────────
+    els.emailInput.addEventListener('input', function () {
+      els.emailError.classList.remove('show');
+      els.emailInput.classList.remove('field-invalid');
+    });
+    function goToStep2() {
+      var trimmed = els.emailInput.value.trim();
+      if (!EMAIL_RE.test(trimmed)) {
+        els.emailError.classList.add('show');
+        els.emailInput.classList.add('field-invalid');
+        return;
+      }
+      state.email = trimmed;
+      showStep(2);
+    }
+    els.continueBtn.addEventListener('click', goToStep2);
+    els.emailInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') goToStep2(); });
+
+    els.backBtn.addEventListener('click', function () {
+      if (state.step === 3) {
+        state.twoFactorCode = '';
+        els.twoFactorInput.value = '';
+        els.twoFactorError.classList.remove('show');
+        showStep(2);
+      } else {
+        showStep(1);
+      }
+    });
+
+    // ── Step 2: password ────────────────────────────────────────────
+    var secure = true;
+    els.eyeBtn.addEventListener('click', function () {
+      secure = !secure;
+      els.passwordInput.type = secure ? 'password' : 'text';
+      els.eyeBtn.textContent = secure ? '👁️' : '🙈';
+    });
+    els.rememberBtn.addEventListener('click', function () {
+      state.rememberMe = !state.rememberMe;
+      els.rememberCheckbox.classList.toggle('checked', state.rememberMe);
+      els.rememberCheckbox.textContent = state.rememberMe ? '✓' : '';
+    });
+    function updateLoginEnabled() {
+      els.loginBtn.disabled = els.passwordInput.value.length === 0;
+    }
+    els.passwordInput.addEventListener('input', function () {
+      els.passwordError.classList.remove('show');
+      updateLoginEnabled();
+    });
+    els.passwordInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(); });
+
+    function setLoading(btn, loading) {
+      btn.classList.toggle('loading', loading);
+      btn.disabled = loading || (btn === els.loginBtn && els.passwordInput.value.length === 0) || (btn === els.verifyBtn && els.twoFactorInput.value.trim().length === 0);
+    }
+
+    function doLogin() {
+      var password = els.passwordInput.value;
+      if (!password || els.loginBtn.classList.contains('loading')) return;
+      state.password = password;
+      submitLogin();
+    }
+    els.loginBtn.addEventListener('click', doLogin);
+
+    function submitLogin(twoFactorCode) {
+      var btn = twoFactorCode ? els.verifyBtn : els.loginBtn;
+      var errEl = twoFactorCode ? els.twoFactorError : els.passwordError;
+      errEl.classList.remove('show');
+      setLoading(btn, true);
+
+      var body = {
+        email: state.email,
+        password: state.password,
+        device_name: 'muslimedu-web',
+      };
+      if (twoFactorCode) body.two_factor_code = twoFactorCode;
+
+      fetch(ENDPOINTS.login, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(body),
+      })
+        .then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            return { res: res, data: data };
+          });
+        })
+        .then(function (result) {
+          var res = result.res, data = result.data;
+          if (res.ok && data && data.requires_two_factor) {
+            showStep(3);
+            return;
+          }
+          if (!res.ok) {
+            errEl.textContent = data && data.message ? data.message : 'Login failed.';
+            errEl.classList.add('show');
+            return;
+          }
+          state.token = data.token;
+          state.user = data.user;
+          saveToken(data.token, state.rememberMe);
+          renderSession(data.user);
+        })
+        .catch(function () {
+          errEl.textContent = 'Could not reach the server. Check your internet connection.';
+          errEl.classList.add('show');
+        })
+        .finally(function () {
+          btn.classList.remove('loading');
+          btn.disabled = twoFactorCode
+            ? els.twoFactorInput.value.trim().length === 0
+            : els.passwordInput.value.length === 0;
+        });
+    }
+
+    // ── Step 3: two-factor ──────────────────────────────────────────
+    els.twoFactorInput.addEventListener('input', function () {
+      els.twoFactorError.classList.remove('show');
+      els.verifyBtn.disabled = els.twoFactorInput.value.trim().length === 0;
+    });
+    els.twoFactorInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') doVerify(); });
+    function doVerify() {
+      var code = els.twoFactorInput.value.trim();
+      if (!code || els.verifyBtn.classList.contains('loading')) return;
+      submitLogin(code);
+    }
+    els.verifyBtn.addEventListener('click', doVerify);
+
+    // ── Get Started sheet ───────────────────────────────────────────
+    function openSheet() { els.sheetBackdrop.classList.add('open'); }
+    function closeSheet() { els.sheetBackdrop.classList.remove('open'); }
+    els.getStartedBtn.addEventListener('click', openSheet);
+    els.getStartedBtn2.addEventListener('click', openSheet);
+    els.sheetBackdrop.addEventListener('click', function (e) { if (e.target === els.sheetBackdrop) closeSheet(); });
+    els.alumniOption.addEventListener('click', function () { els.alumniNote.classList.add('show'); });
+
+    // ── Session view (already signed in) ────────────────────────────
+    function renderSession(user) {
+      els.step1.style.display = 'none';
+      els.step2.style.display = 'none';
+      els.step3.style.display = 'none';
+      els.topbarStep1.style.display = 'flex';
+      els.topbarStepN.style.display = 'none';
+      els.stepPill.textContent = 'SIGNED IN';
+      els.sessionView.style.display = '';
+      els.sessionAvatar.textContent = (user.name || '?').trim().charAt(0).toUpperCase();
+      els.sessionName.textContent = user.name;
+      els.sessionEmail.textContent = user.email;
+      els.sessionRole.textContent = user.role;
+    }
+
+    els.logoutBtn.addEventListener('click', function () {
+      var token = getStoredToken();
+      setLoading(els.logoutBtn, true);
+      var done = function () {
+        clearToken();
+        state.token = null;
+        state.user = null;
+        els.passwordInput.value = '';
+        els.emailInput.value = '';
+        els.logoutBtn.classList.remove('loading');
+        showStep(1);
+      };
+      if (!token) { done(); return; }
+      fetch(ENDPOINTS.logout, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: 'Bearer ' + token },
+      }).then(done).catch(done);
+    });
+
+    // ── On load: restore session, same as AuthContext's launch check ──
+    (function init() {
+      var token = getStoredToken();
+      if (!token) { showStep(1); return; }
+      fetch(ENDPOINTS.me, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: 'Bearer ' + token },
+      })
+        .then(function (res) {
+          if (!res.ok) throw new Error('invalid session');
+          return res.json();
+        })
+        .then(function (data) {
+          state.token = token;
+          state.user = data.user;
+          renderSession(data.user);
+        })
+        .catch(function () {
+          clearToken();
+          showStep(1);
+        });
+    })();
+  </script>
+</body>
+</html>
