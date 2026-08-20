@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
-import { Globe, X, Check } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Globe, ChevronLeft, Languages } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useLocale, RTL_LOCALES } from '../context/LocaleContext';
 import { saveUserSettings } from '../services/studentPortalService';
@@ -9,7 +10,7 @@ import { COLORS, RADIUS, SHADOW } from '../theme/glass';
 const EMERALD = COLORS.emerald;
 const EMERALD_SOFT = COLORS.emeraldSoft;
 const INK = COLORS.ink;
-const SUBTLE = COLORS.subtle;
+const BORDER = COLORS.border;
 
 const LANGUAGE_OPTIONS: { code: string; label: string }[] = [
   { code: 'en', label: 'English' },
@@ -19,11 +20,11 @@ const LANGUAGE_OPTIONS: { code: string; label: string }[] = [
 function GlobeIcon({ color = '#FFFFFF', size = 17 }: { color?: string; size?: number }) {
   return <Globe color={color} size={size} strokeWidth={1.8} />;
 }
-function CloseIcon({ color = SUBTLE, size = 16 }: { color?: string; size?: number }) {
-  return <X color={color} size={size} strokeWidth={2.2} />;
+function BackIcon({ color = INK, size = 22 }: { color?: string; size?: number }) {
+  return <ChevronLeft color={color} size={size} strokeWidth={2.4} />;
 }
-function CheckIcon({ color = EMERALD, size = 18 }: { color?: string; size?: number }) {
-  return <Check color={color} size={size} strokeWidth={2.6} />;
+function LanguagesIcon({ color = EMERALD, size = 40 }: { color?: string; size?: number }) {
+  return <Languages color={color} size={size} strokeWidth={1.6} />;
 }
 
 /**
@@ -39,6 +40,14 @@ function CheckIcon({ color = EMERALD, size = 18 }: { color?: string; size?: numb
  * pill language as CurrencyBalanceButton, just showing the active locale
  * instead of a balance.
  *
+ * The picker itself is a full-screen page (radio rows + a pinned Confirm
+ * button), not a small popup dialog - picking a language is not a quick
+ * toggle among many trivial choices, closer to a real settings pick.
+ * Still a plain RN <Modal> rather than a navigator route: this button is
+ * dropped into screens on both sides of the auth boundary (guest login,
+ * authenticated feed), and a Modal covers both without needing a route
+ * registered in every stack.
+ *
  * Persists the same way AccountSettingsScreen's save does (best-effort -
  * a failed save still flips the in-session locale via refresh(), it just
  * won't survive a relaunch) and shows the same "restart required" prompt
@@ -52,23 +61,30 @@ export default function LanguageSwitcherButton({
   style?: object;
   variant?: 'icon' | 'pill';
 }) {
+  const insets = useSafeAreaInsets();
   const { token } = useAuth();
   const { locale, isRTL, refresh } = useLocale();
   const [visible, setVisible] = useState(false);
+  const [pendingCode, setPendingCode] = useState(locale);
   const [saving, setSaving] = useState(false);
 
-  const pick = async (code: string) => {
-    if (code === locale || saving) {
+  const open = () => {
+    setPendingCode(locale);
+    setVisible(true);
+  };
+
+  const confirm = async () => {
+    if (pendingCode === locale || saving) {
       setVisible(false);
       return;
     }
     setSaving(true);
     const wasRTL = isRTL;
     try {
-      if (token) await saveUserSettings(token, { language: code }).catch(() => {});
-      await refresh(code);
+      if (token) await saveUserSettings(token, { language: pendingCode }).catch(() => {});
+      await refresh(pendingCode);
       setVisible(false);
-      if (RTL_LOCALES.has(code) !== wasRTL) {
+      if (RTL_LOCALES.has(pendingCode) !== wasRTL) {
         Alert.alert('Restart required', 'Restart the app for the right-to-left layout to fully apply.');
       }
     } finally {
@@ -79,41 +95,60 @@ export default function LanguageSwitcherButton({
   return (
     <>
       {variant === 'pill' ? (
-        <TouchableOpacity style={[styles.pill, style]} activeOpacity={0.85} onPress={() => setVisible(true)}>
+        <TouchableOpacity style={[styles.pill, style]} activeOpacity={0.85} onPress={open}>
           <GlobeIcon color={INK} size={18} />
           <Text style={styles.pillText}>{locale.toUpperCase()}</Text>
         </TouchableOpacity>
       ) : (
-        <TouchableOpacity style={[styles.btn, style]} activeOpacity={0.85} onPress={() => setVisible(true)}>
+        <TouchableOpacity style={[styles.btn, style]} activeOpacity={0.85} onPress={open}>
           <GlobeIcon />
         </TouchableOpacity>
       )}
 
-      <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
-        <View style={styles.backdrop}>
-          <TouchableOpacity style={styles.backdropTouch} activeOpacity={1} onPress={() => setVisible(false)} />
-          <View style={styles.sheet}>
-            <TouchableOpacity style={styles.closeBtn} onPress={() => setVisible(false)} hitSlop={12}>
-              <CloseIcon />
+      <Modal visible={visible} animationType="slide" onRequestClose={() => setVisible(false)}>
+        <View style={[styles.screen, { paddingTop: insets.top }]}>
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.backBtn} onPress={() => setVisible(false)} hitSlop={10} disabled={saving}>
+              <BackIcon />
             </TouchableOpacity>
-            <Text style={styles.title}>Language</Text>
+          </View>
 
+          <Text style={styles.title}>Choose Language</Text>
+
+          <View style={styles.heroWrap}>
+            <View style={styles.heroCircle}>
+              <LanguagesIcon />
+            </View>
+          </View>
+
+          <View style={styles.list}>
             {LANGUAGE_OPTIONS.map((opt) => {
-              const active = opt.code === locale;
+              const selected = opt.code === pendingCode;
               return (
                 <TouchableOpacity
                   key={opt.code}
-                  style={[styles.row, active && styles.rowActive]}
+                  style={styles.row}
                   activeOpacity={0.7}
-                  onPress={() => pick(opt.code)}
+                  onPress={() => setPendingCode(opt.code)}
                   disabled={saving}
                 >
-                  <Text style={[styles.rowLabel, active && styles.rowLabelActive]}>{opt.label}</Text>
-                  {active && <CheckIcon />}
+                  <Text style={[styles.rowLabel, selected && styles.rowLabelActive]}>{opt.label}</Text>
+                  <View style={[styles.radio, selected && styles.radioActive]}>
+                    {selected ? <View style={styles.radioDot} /> : null}
+                  </View>
                 </TouchableOpacity>
               );
             })}
           </View>
+
+          <TouchableOpacity
+            style={[styles.confirmBtn, { marginBottom: Math.max(insets.bottom, 20) }, saving && styles.confirmBtnDisabled]}
+            onPress={confirm}
+            activeOpacity={0.88}
+            disabled={saving}
+          >
+            {saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.confirmText}>Confirm</Text>}
+          </TouchableOpacity>
         </View>
       </Modal>
     </>
@@ -143,40 +178,52 @@ const styles = StyleSheet.create({
   },
   pillText: { fontSize: 14, fontWeight: '800', color: INK, letterSpacing: 0.3 },
 
-  backdrop: { flex: 1, backgroundColor: 'rgba(17,20,23,0.45)', alignItems: 'center', justifyContent: 'center', padding: 28 },
-  backdropTouch: { ...StyleSheet.absoluteFill },
-  sheet: {
-    width: '100%',
-    maxWidth: 320,
-    backgroundColor: '#FFFFFF',
-    borderRadius: RADIUS.xl,
-    padding: 20,
-    ...SHADOW.level3,
-  },
-  closeBtn: {
-    position: 'absolute',
-    top: 14,
-    right: 14,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: COLORS.canvas,
+  screen: { flex: 1, backgroundColor: '#FFFFFF', paddingHorizontal: 24 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingTop: 8 },
+  backBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
+  title: { fontSize: 24, fontWeight: '800', color: INK, textAlign: 'center', marginTop: 8 },
+
+  heroWrap: { alignItems: 'center', justifyContent: 'center', marginTop: 24, marginBottom: 32 },
+  heroCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: EMERALD_SOFT,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: { fontSize: 17, fontWeight: '800', color: INK, marginBottom: 14 },
 
+  list: { flex: 1 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: RADIUS.md,
-    marginBottom: 6,
-    backgroundColor: COLORS.canvas,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER,
   },
-  rowActive: { backgroundColor: EMERALD_SOFT },
-  rowLabel: { fontSize: 15, fontWeight: '600', color: INK },
-  rowLabelActive: { color: EMERALD, fontWeight: '800' },
+  rowLabel: { fontSize: 16, color: INK, fontWeight: '500' },
+  rowLabelActive: { fontWeight: '700' },
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: BORDER,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioActive: { borderColor: EMERALD },
+  radioDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: EMERALD },
+
+  confirmBtn: {
+    backgroundColor: EMERALD,
+    borderRadius: RADIUS.pill,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  confirmBtnDisabled: { opacity: 0.6 },
+  confirmText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
 });
