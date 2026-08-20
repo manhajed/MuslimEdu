@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...SHADOW.level1,
   },
-  packageCardActive: { borderWidth: 2, borderColor: EMERALD },
+  packageCardActive: { borderWidth: 2, borderColor: INK },
   packageHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
