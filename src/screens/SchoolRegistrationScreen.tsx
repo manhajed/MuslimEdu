@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Alert,
   ActivityIndicator,
   Animated,
+  Easing,
 } from 'react-native';
 import KeyboardAwareModal from '../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
@@ -68,7 +69,6 @@ const INSTITUTION_OPTIONS: InstitutionOption[] = [
   { id: 1, type: 'mahad', name: 'Mahad' },
   { id: 2, type: 'madrasa', name: 'Madrasa' },
   { id: 3, type: 'markaz', name: 'Markaz' },
-  { id: 4, type: 'regular_school', name: 'Regular School' },
   { id: 5, type: 'orphanage', name: 'Orphan School' },
 ];
 
@@ -198,6 +198,13 @@ function PasswordStrengthChecklist({ password }: { password: string }) {
  * sheet (opened right after a card is tapped) instead of an inline card
  * under the grid - answers "what do I actually get" without pushing the
  * rest of the form down / requiring a scroll to see it.
+ *
+ * Animates the dim layer and the sheet separately (Modal's own "slide"
+ * animation was used before, but that slides the WHOLE modal content -
+ * dim layer included - up from off-screen together with the sheet, so the
+ * backdrop only reaches full-screen once the slide finishes, reading as a
+ * delay before anything darkens). The dim now fades in place instantly
+ * while just the sheet card slides up over it.
  */
 function InstitutionFeatureSheet({
   visible,
@@ -211,14 +218,32 @@ function InstitutionFeatureSheet({
   insetsBottom: number;
 }) {
   const { t } = useLocale();
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(320)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(backdropOpacity, { toValue: 1, duration: 160, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: 0, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      ]).start();
+    } else {
+      backdropOpacity.setValue(0);
+      translateY.setValue(320);
+    }
+  }, [visible, backdropOpacity, translateY]);
+
   if (!type) return null;
   const meta = INSTITUTION_META[type];
 
   return (
-    <KeyboardAwareModal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={sheet.backdrop}>
+    <KeyboardAwareModal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <View style={[sheet.backdrop, { backgroundColor: 'transparent' }]}>
+        <Animated.View
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(17,20,23,0.4)', opacity: backdropOpacity }]}
+        />
         <TouchableOpacity style={sheet.backdropTouch} activeOpacity={1} onPress={onClose} />
-        <View style={[sheet.sheet, { paddingBottom: Math.max(insetsBottom, 20) }]}>
+        <Animated.View style={[sheet.sheet, { paddingBottom: Math.max(insetsBottom, 20), transform: [{ translateY }] }]}>
           <View style={sheet.handle} />
           <View style={sheet.headerRow}>
             <Text style={[sheet.title, { flex: 1, marginRight: 12 }]} numberOfLines={2}>
@@ -236,7 +261,7 @@ function InstitutionFeatureSheet({
               <Text style={preview.rowText}>{t(`school_registration.feature_${type}_${i}`, feature)}</Text>
             </View>
           ))}
-        </View>
+        </Animated.View>
       </View>
     </KeyboardAwareModal>
   );
@@ -297,12 +322,12 @@ function SchoolTypeCard({
           </Text>
 
           <View style={typeCard.iconWrap}>
-            <Icon size={17} color="#FFFFFF" strokeWidth={1.8} />
+            <Icon size={24} color="#FFFFFF" strokeWidth={1.8} />
           </View>
 
           {selected ? (
             <View style={typeCard.checkBadge}>
-              <Check size={12} color={TYPE_GRADIENTS[option.type][1]} strokeWidth={3} />
+              <Check size={14} color={TYPE_GRADIENTS[option.type][1]} strokeWidth={3} />
             </View>
           ) : null}
         </LinearGradient>
@@ -836,14 +861,14 @@ const preview = StyleSheet.create({
 
 const typeCard = StyleSheet.create({
   label: { fontSize: 12.5, fontWeight: '600', color: SUBTLE, marginBottom: 8 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
   // Shadow (elevation, on Android) stays on this outer wrapper, never on the
   // clipped gradient card below it - see SchoolTypeCard's doc comment.
-  wrap: { width: '48%', borderRadius: RADIUS.lg, ...SHADOW.level1 },
+  wrap: { width: '47%', borderRadius: RADIUS.lg, ...SHADOW.level1 },
   card: {
-    minHeight: 108,
+    minHeight: 190,
     borderRadius: RADIUS.lg,
-    padding: 12,
+    padding: 18,
     justifyContent: 'space-between',
     overflow: 'hidden',
     // Always a 3px border, just transparent when unselected - selection
@@ -859,29 +884,29 @@ const typeCard = StyleSheet.create({
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(255,255,255,0.25)',
     borderRadius: RADIUS.pill,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
   },
-  badgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
-  tagline: { color: '#FFFFFF', fontSize: 12.5, fontWeight: '800', lineHeight: 16, marginTop: 8, marginRight: 34 },
+  badgeText: { color: '#FFFFFF', fontSize: 12.5, fontWeight: '700' },
+  tagline: { color: '#FFFFFF', fontSize: 15, fontWeight: '800', lineHeight: 20, marginTop: 14, marginRight: 44 },
   iconWrap: {
     position: 'absolute',
-    right: 10,
-    bottom: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    right: 16,
+    bottom: 16,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    top: 12,
+    right: 12,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
