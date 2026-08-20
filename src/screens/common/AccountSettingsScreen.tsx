@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -15,12 +15,13 @@ import {
   Phone,
   BellRing,
   KeyRound,
+  LogOut,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { DISPLAY_SCALE_OPTIONS, useDisplayScale } from '../../context/DisplayScaleContext';
 import { INK, SUBTLE } from '../dashboards/DashboardShell';
-import { BRAND } from '../../theme/glass';
+import { BRAND, COLORS, RADIUS, SHADOW } from '../../theme/glass';
 import { Skeleton } from '../../components/Skeleton';
 import {
   UserSettings,
@@ -49,6 +50,11 @@ import { AccountSettingField, AccountSettingOption } from './AccountSettingPicke
  * own screens - flipping a switch already IS the whole interaction, a
  * dedicated wizard page for a single on/off choice would be friction with
  * no benefit.
+ *
+ * Log Out lives here too (moved off MenuScreen, which used to append its
+ * own copy under every role's dashboard) - same bordered-card design
+ * (danger icon badge + title/subtitle + chevron, confirm-before-signing-out)
+ * as one entry point instead of one per role.
  */
 
 const BORDER = '#E4E9E5';
@@ -143,7 +149,7 @@ function ListSkeleton() {
 export default function AccountSettingsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const { t } = useLocale();
   const { scale, setScale } = useDisplayScale();
 
@@ -174,6 +180,17 @@ export default function AccountSettingsScreen() {
 
   const openPicker = (settingField: AccountSettingField | 'display_scale', title: string, pickerOptions: AccountSettingOption[], currentKey: string) => {
     (navigation as any).navigate('AccountSettingPicker', { settingField, title, options: pickerOptions, currentKey });
+  };
+
+  const confirmLogout = () => {
+    Alert.alert(
+      t('menu.log_out_confirm_title', 'Log out?'),
+      t('menu.log_out_confirm_message', "You'll need to sign in again to continue."),
+      [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+        { text: t('menu.log_out', 'Log Out'), style: 'destructive', onPress: logout },
+      ],
+    );
   };
 
   const toggleField = async (field: 'show_email' | 'show_phone', value: boolean) => {
@@ -361,6 +378,17 @@ export default function AccountSettingsScreen() {
             onPress={() => (navigation as any).navigate('ChangePassword')}
           />
         </View>
+
+        <TouchableOpacity style={styles.logoutCard} activeOpacity={0.7} onPress={confirmLogout}>
+          <View style={styles.logoutIconBadge}>
+            <LogOut size={20} color={COLORS.danger} strokeWidth={2} />
+          </View>
+          <View style={styles.logoutTextWrap}>
+            <Text style={styles.logoutTitle}>{t('menu.log_out', 'Log Out')}</Text>
+            <Text style={styles.logoutSubtitle}>{t('menu.log_out_subtitle', 'Sign out of your account')}</Text>
+          </View>
+          <IconChevronRight color={SUBTLE} />
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -408,4 +436,29 @@ const styles = StyleSheet.create({
   },
   rowTitle: { fontSize: 14.5, fontWeight: '600', color: INK, flex: 1 },
   rowValue: { fontSize: 13.5, color: SUBTLE, marginRight: 6, maxWidth: 120 },
+
+  logoutCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: BORDER,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 12,
+    marginBottom: 20,
+    ...SHADOW.level1,
+  },
+  logoutIconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(239,68,68,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutTextWrap: { flex: 1 },
+  logoutTitle: { fontSize: 15, fontWeight: '700', color: COLORS.danger },
+  logoutSubtitle: { fontSize: 12.5, color: SUBTLE, marginTop: 2 },
 });
