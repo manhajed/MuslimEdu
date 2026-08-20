@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ChevronRight, Clock, CreditCard } from 'lucide-react-native';
 import { useLocale } from '../context/LocaleContext';
 import { AdminSubscriptionStatus } from '../services/subscriptionService';
-import { COLORS, RADIUS } from '../theme/glass';
+import { COLORS, RADIUS, SHADOW } from '../theme/glass';
 
 /**
  * Read-only summary of this school's platform subscription - package,
@@ -40,7 +40,7 @@ export default function SubscriptionStatusCard({
     return (
       <TouchableOpacity style={styles.card} activeOpacity={onRetry ? 0.7 : 1} onPress={onRetry} disabled={!onRetry}>
         <View style={[styles.iconWrap, styles.iconWrapMuted]}>
-          <CreditCard size={18} color={COLORS.subtle} strokeWidth={1.8} />
+          <CreditCard size={20} color={COLORS.subtle} strokeWidth={1.8} />
         </View>
         <View style={styles.textWrap}>
           <Text style={styles.title}>{t('subscription_card.load_failed_title', 'Subscription status unavailable')}</Text>
@@ -48,6 +48,11 @@ export default function SubscriptionStatusCard({
             {t('subscription_card.load_failed_subtitle', 'Tap to try again.')}
           </Text>
         </View>
+        {onRetry ? (
+          <View style={styles.chevronWrap}>
+            <ChevronRight size={16} color={COLORS.subtle} strokeWidth={2.5} />
+          </View>
+        ) : null}
       </TouchableOpacity>
     );
   }
@@ -60,7 +65,7 @@ export default function SubscriptionStatusCard({
     return (
       <View style={styles.card}>
         <View style={[styles.iconWrap, styles.iconWrapAmber]}>
-          <Clock size={18} color={AMBER} strokeWidth={1.8} />
+          <Clock size={20} color={AMBER} strokeWidth={1.8} />
         </View>
         <View style={styles.textWrap}>
           <View style={styles.titleRow}>
@@ -68,6 +73,7 @@ export default function SubscriptionStatusCard({
               {status.pending_request.package ?? t('subscription_card.no_package', 'Subscription')}
             </Text>
             <View style={[styles.pill, pillStyles.pending]}>
+              <View style={[styles.pillDot, { backgroundColor: AMBER }]} />
               <Text style={[styles.pillText, pillTextStyles.pending]}>
                 {t('subscription_card.status_pending', 'Pending review')}
               </Text>
@@ -132,7 +138,7 @@ export default function SubscriptionStatusCard({
       {...(isTappable ? { activeOpacity: 0.75, onPress: showDetailsCta ? onDetailsPress : onSubscribePress } : {})}
     >
       <View style={styles.iconWrap}>
-        <CreditCard size={18} color={COLORS.emerald} strokeWidth={1.8} />
+        <CreditCard size={20} color={COLORS.emerald} strokeWidth={1.8} />
       </View>
       <View style={styles.textWrap}>
         <View style={styles.titleRow}>
@@ -140,6 +146,7 @@ export default function SubscriptionStatusCard({
             {status.package ?? t('subscription_card.no_package', 'Subscription')}
           </Text>
           <View style={[styles.pill, pillStyles[pillTone]]}>
+            <View style={[styles.pillDot, { backgroundColor: DOT_COLORS[pillTone] }]} />
             <Text style={[styles.pillText, pillTextStyles[pillTone]]}>{pillLabel}</Text>
           </View>
         </View>
@@ -150,7 +157,11 @@ export default function SubscriptionStatusCard({
               : t('subscription_card.contact_owner', 'Contact your account owner to activate a plan.'))}
         </Text>
       </View>
-      {isTappable ? <ChevronRight size={18} color={COLORS.subtle} strokeWidth={2} /> : null}
+      {isTappable ? (
+        <View style={styles.chevronWrap}>
+          <ChevronRight size={16} color={COLORS.subtle} strokeWidth={2.5} />
+        </View>
+      ) : null}
     </Container>
   );
 }
@@ -163,30 +174,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 12,
+    borderRadius: RADIUS.lg,
+    padding: 16,
     marginHorizontal: 16,
     marginBottom: 12,
+    ...SHADOW.level1,
   },
   iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     backgroundColor: COLORS.emeraldSoft,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 12,
   },
   iconWrapMuted: { backgroundColor: '#EEF0F2' },
   iconWrapAmber: { backgroundColor: AMBER_SOFT },
   textWrap: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  title: { fontSize: 13, fontWeight: '700', color: COLORS.ink, flexShrink: 1 },
-  subtitle: { fontSize: 11, color: COLORS.subtle, marginTop: 1 },
-  pill: { borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 2 },
-  pillText: { fontSize: 10, fontWeight: '700' },
+  title: { fontSize: 15, fontWeight: '700', color: COLORS.ink, flexShrink: 1, letterSpacing: -0.2 },
+  subtitle: { fontSize: 12.5, color: COLORS.subtle, marginTop: 3 },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
+  pillDot: { width: 6, height: 6, borderRadius: 3 },
+  pillText: { fontSize: 10.5, fontWeight: '700' },
+  chevronWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
+    marginLeft: 4,
+  },
 });
 
 const pillStyles = StyleSheet.create({
@@ -201,3 +228,8 @@ const pillTextStyles = StyleSheet.create({
   none: { color: COLORS.subtle },
   pending: { color: AMBER },
 });
+const DOT_COLORS: Record<'active' | 'expired' | 'none', string> = {
+  active: COLORS.emerald,
+  expired: COLORS.danger,
+  none: COLORS.subtle,
+};
