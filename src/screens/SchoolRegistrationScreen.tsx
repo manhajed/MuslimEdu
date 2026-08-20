@@ -30,7 +30,6 @@ import { submitSchoolRegistration, SchoolRegistrationInput } from '../services/s
 import {
   WizardGradientButton as GradientButton,
   WizardFieldLabel as FieldLabel,
-  CheckCircleIcon,
   form,
 } from '../components/wizard/WizardKit';
 
@@ -379,6 +378,15 @@ export default function SchoolRegistrationScreen() {
 
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [submitted, setSubmitted] = useState(false);
+  // Spring-in for the success icon, App Store/Wallet-style, rather than
+  // just appearing statically.
+  const successIconScale = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (submitted) {
+      successIconScale.setValue(0);
+      Animated.spring(successIconScale, { toValue: 1, useNativeDriver: true, friction: 5, tension: 60 }).start();
+    }
+  }, [submitted, successIconScale]);
 
   // Step 1 - Institution type
   const [institutionTypeId, setInstitutionTypeId] = useState<number | null>(null);
@@ -520,19 +528,31 @@ export default function SchoolRegistrationScreen() {
     return (
       <View style={styles.flex}>
         <GlassBackground variant="canvas" />
-        <View style={[styles.successWrap, { paddingTop: insets.top + 40 }]}>
-          <CheckCircleIcon size={80} />
-          <Text style={styles.successTitle}>{t('school_registration.pending_title', 'Application submitted')}</Text>
-          <Text style={styles.successBody}>
-            {t(
-              'school_registration.pending_body',
-              "Your school and admin account are pending review. You'll be able to sign in once a superadmin approves your application - this is usually quick, but can take a little while.",
-            )}
-          </Text>
-          <View style={styles.pendingBadge}>
-            <Text style={styles.pendingBadgeText}>{t('school_registration.pending_badge', 'Status: Pending Approval')}</Text>
+        <View style={[success.container, { paddingTop: insets.top }]}>
+          <View style={success.content}>
+            <Animated.View style={[success.iconWrap, { transform: [{ scale: successIconScale }] }]}>
+              <Check size={44} color="#FFFFFF" strokeWidth={3} />
+            </Animated.View>
+
+            <Text style={success.title}>{t('school_registration.pending_title', 'Application Submitted')}</Text>
+            <Text style={success.body}>
+              {t(
+                'school_registration.pending_body',
+                "Your school and admin account are pending review. You'll be able to sign in once a superadmin approves your application - this is usually quick, but can take a little while.",
+              )}
+            </Text>
+
+            <View style={success.statusChip}>
+              <View style={success.statusDot} />
+              <Text style={success.statusText}>{t('school_registration.pending_badge', 'Pending Approval')}</Text>
+            </View>
           </View>
-          <GradientButton label={t('school_registration.back_to_login', 'Back to Login')} onPress={() => navigation.goBack()} />
+
+          <View style={[success.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+            <TouchableOpacity style={success.button} activeOpacity={0.85} onPress={() => navigation.goBack()}>
+              <Text style={success.buttonText}>{t('school_registration.back_to_login', 'Back to Login')}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -859,12 +879,59 @@ const styles = StyleSheet.create({
 
   body: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24 },
   footer: { paddingHorizontal: 20, paddingTop: 10, borderTopWidth: 1, borderTopColor: BORDER, backgroundColor: COLORS.surface },
+});
 
-  successWrap: { flex: 1, alignItems: 'center', paddingHorizontal: 32 },
-  successTitle: { fontSize: 21, fontWeight: '800', color: INK, marginTop: 20, textAlign: 'center' },
-  successBody: { fontSize: 14, color: SUBTLE, textAlign: 'center', marginTop: 12, lineHeight: 21 },
-  pendingBadge: { backgroundColor: COLORS.emeraldSoft, borderRadius: RADIUS.pill, paddingHorizontal: 16, paddingVertical: 9, marginTop: 20, marginBottom: 32 },
-  pendingBadgeText: { color: BRAND.emeraldDeep, fontWeight: '700', fontSize: 13 },
+// Success screen after submitting - centered content with a single CTA
+// pinned to the bottom safe area, filled (not gradient) icon and button,
+// a small dot-status chip instead of a solid-tint badge: closer to Apple's
+// confirmation-screen language (App Store/Wallet "Done" states) than the
+// gradient-capsule look the rest of this wizard uses.
+const success = StyleSheet.create({
+  container: { flex: 1, justifyContent: 'space-between' },
+  content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+  iconWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: BRAND.emerald,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: BRAND.emeraldDeep,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.28,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  title: { fontSize: 28, fontWeight: '800', color: INK, textAlign: 'center', marginTop: 26, letterSpacing: -0.3 },
+  body: { fontSize: 15.5, color: SUBTLE, textAlign: 'center', marginTop: 12, lineHeight: 23 },
+  statusChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginTop: 28,
+    ...SHADOW.level1,
+  },
+  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#F5A623' },
+  statusText: { color: INK, fontWeight: '700', fontSize: 13.5 },
+
+  footer: { paddingHorizontal: 24 },
+  button: {
+    backgroundColor: BRAND.emerald,
+    borderRadius: 16,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: BRAND.emeraldDeep,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 });
 
 // Soft, borderless pill fields instead of WizardKit's shared bordered
