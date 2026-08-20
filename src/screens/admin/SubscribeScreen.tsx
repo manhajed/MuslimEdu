@@ -11,7 +11,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { Check, ChevronLeft, Clock, Layers, Zap } from 'lucide-react-native';
+import { Check, ChevronLeft, Clock, Layers, Smartphone, Zap } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import {
@@ -143,6 +143,35 @@ export default function SubscribeScreen() {
   };
 
   const pendingRequest = status?.pending_request ?? null;
+  const selectedPackage = packages.find((pkg) => pkg.id === selectedId) ?? null;
+  const isPaidPlanSelected = !!selectedPackage && Number(selectedPackage.price) > 0;
+
+  // TEMPORARY, development-only: simulates a GCash payment so the submit
+  // flow can be exercised end-to-end before PayMongo is actually wired up.
+  // No real charge happens here - remove once real GCash checkout lands.
+  const handleGcashDevPay = async () => {
+    if (!token || !selectedId) return;
+    setIsSubmitting(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      await submitSubscriptionRequest(token, {
+        package_id: selectedId,
+        payment_reference: 'GCash (dev simulated payment)',
+      });
+      Alert.alert(
+        t('subscribe.submitted_title', 'Request submitted'),
+        t('subscribe.submitted_body', "We'll let you know once it's reviewed."),
+      );
+      navigation.goBack();
+    } catch (err) {
+      Alert.alert(
+        t('subscribe.submit_error_title', "Couldn't submit request"),
+        err instanceof Error ? err.message : t('common.try_again_full', 'Please try again.'),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <View style={styles.flex}>
@@ -244,6 +273,30 @@ export default function SubscribeScreen() {
               })}
             </View>
           )}
+
+          {__DEV__ && isPaidPlanSelected ? (
+            <>
+              <TouchableOpacity
+                style={[styles.gcashButton, isSubmitting && { opacity: 0.6 }]}
+                onPress={handleGcashDevPay}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Smartphone size={18} color="#FFFFFF" strokeWidth={2} />
+                    <Text style={styles.gcashButtonText}>
+                      {t('subscribe.pay_gcash_dev', 'Pay with GCash (Dev Test)')}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+              <Text style={styles.devNote}>
+                {t('subscribe.gcash_dev_note', 'Development only — no real charge is made.')}
+              </Text>
+            </>
+          ) : null}
 
           <Text style={styles.fieldLabel}>{t('subscribe.payment_reference_label', 'Payment note (optional)')}</Text>
           <TextInput
@@ -365,6 +418,21 @@ const styles = StyleSheet.create({
   priceValue: { fontSize: 30, fontWeight: '800', color: INK, letterSpacing: -0.5 },
   priceUnit: { fontSize: 14, color: SUBTLE, marginBottom: 4 },
   packageDesc: { fontSize: 13.5, color: SUBTLE, marginTop: 8, lineHeight: 20 },
+
+  // GCash brand blue - matches the app's official button color, kept
+  // visually distinct from the emerald submit button below it.
+  gcashButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#0072CE',
+    borderRadius: RADIUS.pill,
+    paddingVertical: 16,
+    marginTop: 24,
+  },
+  gcashButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
+  devNote: { fontSize: 11.5, color: SUBTLE, textAlign: 'center', marginTop: 8 },
 
   fieldLabel: { fontSize: 13, fontWeight: '600', color: INK, marginBottom: 8, marginTop: 20 },
   fieldInput: {
