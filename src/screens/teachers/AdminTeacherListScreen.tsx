@@ -1,18 +1,17 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Animated,
+  FlatList,
   TouchableOpacity,
   RefreshControl,
   TextInput,
   Alert,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft, ChevronRight, FileText, IdCard, Plus, Search, UserRound, X } from 'lucide-react-native';
+import { ChevronRight, FileText, IdCard, Plus, Search, UserRound, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchTeacherOverview, TeacherOverview, addTeacher } from '../../services/adminTeacherService';
@@ -20,8 +19,9 @@ import { Skeleton } from '../../components/Skeleton';
 import UserAvatar from '../../components/UserAvatar';
 import AccountWizardSheet, { WizardStepDef, wizardFieldStyles } from '../../components/wizard/AccountWizardSheet';
 
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SHADOW, GLASS, BRAND, COLORS, RADIUS } from '../../theme/glass';
+import { SHADOW, GLASS, COLORS, RADIUS } from '../../theme/glass';
+import GlassBackground from '../../components/glass/GlassBackground';
+import ScreenHeader from '../../components/ScreenHeader';
 import { Box } from '../../components/ui/box';
 import { HStack } from '../../components/ui/hstack';
 import { VStack } from '../../components/ui/vstack';
@@ -32,30 +32,15 @@ const INK = COLORS.ink;
 const SUBTLE = COLORS.subtle;
 const HAIRLINE = COLORS.border;
 const CANVAS = COLORS.canvas;
-const GLASS_SURFACE = GLASS.fillOnLight;
 const GLASS_SURFACE_STRONG = GLASS.fillOnLightStrong;
-const GLASS_BORDER = GLASS.borderOnLight;
 const DANGER = COLORS.danger;
-const WHITE = '#FFFFFF';
-const HERO_GLASS_BG = 'rgba(255,255,255,0.16)';
-const HERO_GLASS_BORDER = 'rgba(255,255,255,0.28)';
 
 // No section/department field exists on TeacherOverview, so the "section"
 // color-coding here is by report status instead (submitted vs missing) -
 // the only per-teacher category this screen actually has.
 const STATUS_ACCENT = { submitted: EMERALD, missing: DANGER };
 
-// Same parallax hero technique as StudentListScreen / PrayerTimesDetailScreen:
-// a separate Animated background layer travels at half scroll speed and
-// fades out, while the header/search - inside the FlatList's own
-// ListHeaderComponent - scrolls away at normal speed on top of it.
-const HERO_HEIGHT = 150;
-const PARALLAX_FACTOR = 0.5;
-
 // --- Icons (matches the app's existing inline-SVG icon style) ---
-function ChevronLeftIcon({ color }: { color: string }) {
-  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
-}
 function SearchIcon({ color }: { color: string }) {
   return <Search size={17} color={color} strokeWidth={2} />;
 }
@@ -378,7 +363,6 @@ function AddTeacherSheet({
 }
 
 export default function AdminTeacherListScreen() {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { token } = useAuth();
   const { t } = useLocale();
@@ -449,34 +433,16 @@ export default function AdminTeacherListScreen() {
     });
   };
 
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const [heroHeight, setHeroHeight] = useState(HERO_HEIGHT);
-
-  const bgTranslateY = scrollY.interpolate({
-    inputRange: [0, heroHeight],
-    outputRange: [0, -heroHeight * PARALLAX_FACTOR],
-    extrapolate: 'clamp',
-  });
-  const bgOpacity = scrollY.interpolate({
-    inputRange: [0, heroHeight * 0.6, heroHeight],
-    outputRange: [1, 1, 0],
-    extrapolate: 'clamp',
-  });
-
   const listHeader = (
-    <View onLayout={(e) => setHeroHeight(e.nativeEvent.layout.height)}>
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={10}>
-          <ChevronLeftIcon color={WHITE} />
-          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
-        </TouchableOpacity>
-        <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>{t('admin_teacher_list.header_title', 'Teachers')}</Text>
-        </View>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setAddSheetOpen(true)} hitSlop={8}>
-          <PlusIcon color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+    <>
+      <ScreenHeader
+        title={t('admin_teacher_list.header_title', 'Teachers')}
+        rightAction={
+          <TouchableOpacity style={styles.addBtn} onPress={() => setAddSheetOpen(true)} hitSlop={8}>
+            <PlusIcon color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       <View style={styles.searchWrap}>
         <SearchIcon color={SUBTLE} />
@@ -488,24 +454,12 @@ export default function AdminTeacherListScreen() {
           onChangeText={setQuery}
         />
       </View>
-    </View>
+    </>
   );
 
   return (
     <View style={styles.flex}>
-      <Animated.View
-        style={[
-          styles.bgLayer,
-          { height: heroHeight, transform: [{ translateY: bgTranslateY }], opacity: bgOpacity },
-        ]}
-      >
-        <LinearGradient
-          colors={[BRAND.emerald, BRAND.emeraldDeep]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
+      <GlassBackground variant="canvas" />
 
       {isLoading ? (
         <View style={styles.flex1}>
@@ -533,17 +487,13 @@ export default function AdminTeacherListScreen() {
           </View>
         </View>
       ) : (
-        <Animated.FlatList
+        <FlatList
           data={filtered}
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={listHeader}
-          onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-            useNativeDriver: true,
-          })}
-          scrollEventThrottle={16}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={EMERALD} />}
-          renderItem={({ item }: { item: TeacherOverview }) => <TeacherRow item={item} onPress={setSelectedTeacher} />}
+          renderItem={({ item }) => <TeacherRow item={item} onPress={setSelectedTeacher} />}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <EmptyIcon />
@@ -573,35 +523,15 @@ export default function AdminTeacherListScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: CANVAS },
+  flex: { flex: 1, backgroundColor: 'transparent' },
   flex1: { flex: 1 },
-  bgLayer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    overflow: 'hidden',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-  },
-  backBtn: { flexDirection: 'row', alignItems: 'center', minWidth: 72 },
-  backText: { color: WHITE, fontSize: 16, fontWeight: '600', marginLeft: 2 },
-  headerTitleWrap: { alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: WHITE },
   addBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: HERO_GLASS_BG,
-    borderWidth: 1,
-    borderColor: HERO_GLASS_BORDER,
+    backgroundColor: EMERALD,
   },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   errorText: { color: DANGER, textAlign: 'center', marginBottom: 12 },
@@ -611,13 +541,13 @@ const styles = StyleSheet.create({
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.surface,
     borderRadius: RADIUS.pill,
     paddingHorizontal: 16,
     height: 48,
     gap: 10,
-    marginHorizontal: 16,
-    marginBottom: 14,
+    marginHorizontal: 20,
+    marginTop: 16,
   ...SHADOW.level1,
   },
   searchInput: { flex: 1, fontSize: 14.5, color: INK, padding: 0 },

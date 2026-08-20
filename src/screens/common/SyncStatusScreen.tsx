@@ -9,6 +9,7 @@ import { useOfflineQueue } from '../../context/OfflineQueueContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { COLORS, RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import ScreenHeader from '../../components/ScreenHeader';
 import BottomNavBar from '../../components/BottomNavBar';
 import { scanCachedDatasets, formatBytes, CachedDataset } from '../../utils/syncStatus';
 import { QueuedAction, QueuedActionKind } from '../../services/offlineQueue';
@@ -104,13 +105,12 @@ export default function SyncStatusScreen() {
   return (
     <View style={styles.container}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-          <IconChevronLeft color={theme.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('sync_status.title', 'Offline & Sync')}</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader
+        title={t('sync_status.title', 'Offline & Sync')}
+        ink={theme.textPrimary}
+        subtle={theme.textSecondary}
+        backBg={theme.surface}
+      />
 
       <View style={styles.connectionBanner}>
         <View style={[styles.connectionDot, { backgroundColor: isOnline ? COLORS.emerald : COLORS.danger }]} />

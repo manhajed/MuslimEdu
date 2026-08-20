@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ScreenHeader from '../../components/ScreenHeader';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { EMERALD, EMERALD_SOFT, INK, SUBTLE } from '../dashboards/DashboardShell';
@@ -82,7 +82,6 @@ const RISK_LEVEL_FALLBACKS: Record<RiskLevel, string> = {
 
 export default function StudentProgressScreen() {
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
   const { token, user } = useAuth();
   // Quran memorization tracking is Markaz-only (per admin request) - this
   // is the backstop, since a teacher can still reach this screen via
@@ -315,16 +314,11 @@ export default function StudentProgressScreen() {
   }
 
   return (
-    <View style={[styles.flex, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backChevron}>‹</Text>
-        </TouchableOpacity>
-        <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>{t('student_progress.header_title', 'Student Progress')}</Text>
-          <Text style={styles.headerSub}>{t('student_progress.header_sub', 'Attendance, grades, behavior, and memorization in one view')}</Text>
-        </View>
-      </View>
+    <View style={styles.flex}>
+      <ScreenHeader
+        title={t('student_progress.header_title', 'Student Progress')}
+        caption={t('student_progress.header_sub', 'Attendance, grades, behavior, and memorization in one view')}
+      />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
         {sections.map((s) => (

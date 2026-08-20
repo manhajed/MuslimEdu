@@ -8,6 +8,7 @@ import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import ScreenHeader from '../../components/ScreenHeader';
 import { Skeleton } from '../../components/Skeleton';
 import { EmptyState } from '../../components/EmptyState';
 import BottomNavBar from '../../components/BottomNavBar';
@@ -141,19 +142,19 @@ export default function ProgramsCatalogScreen() {
   );
 
   const header = (
-    <View style={[styles.header, { paddingTop: insets.top }]}>
-      <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-        <IconChevronLeft color={theme.textPrimary} />
-      </TouchableOpacity>
-      <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('programs_catalog.title', 'Subjects')}</Text>
-      {!loading ? (
-        <TouchableOpacity style={styles.addButton} onPress={() => (navigation as any).navigate('SubjectForm')}>
-          <Text style={styles.addButtonText}>{t('programs_catalog.add', '+ Add')}</Text>
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.headerSpacer} />
-      )}
-    </View>
+    <ScreenHeader
+      title={t('programs_catalog.title', 'Subjects')}
+      ink={theme.textPrimary}
+      subtle={theme.textSecondary}
+      backBg={theme.surface}
+      rightAction={
+        !loading ? (
+          <TouchableOpacity style={styles.addButton} onPress={() => (navigation as any).navigate('SubjectForm')}>
+            <Text style={styles.addButtonText}>{t('programs_catalog.add', '+ Add')}</Text>
+          </TouchableOpacity>
+        ) : undefined
+      }
+    />
   );
 
   if (loading) {

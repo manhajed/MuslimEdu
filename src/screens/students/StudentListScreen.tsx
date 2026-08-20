@@ -1,18 +1,17 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Animated,
+  FlatList,
   TouchableOpacity,
   RefreshControl,
   TextInput,
   Platform,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import KeyboardAwareModal from '../../components/KeyboardAwareModal';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import { Check, ChevronLeft, ChevronRight, Funnel, Plus, Search, X } from 'lucide-react-native';
+import { Check, ChevronRight, Funnel, Plus, Search, X } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { fetchStudents, StudentSummary, ChildStatus } from '../../services/adminService';
@@ -20,8 +19,9 @@ import { Skeleton, SkeletonCircle } from '../../components/Skeleton';
 import UserAvatar from '../../components/UserAvatar';
 import { ChildActionModal, ChildProfileSheet } from '../../components/ChildProfileSheet';
 
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BRAND, COLORS, RADIUS, SHADOW } from '../../theme/glass';
+import { COLORS, RADIUS, SHADOW } from '../../theme/glass';
+import GlassBackground from '../../components/glass/GlassBackground';
+import ScreenHeader from '../../components/ScreenHeader';
 import { isOrphanSchoolUser } from '../../utils/orphanSchool';
 import { Box } from '../../components/ui/box';
 import { HStack } from '../../components/ui/hstack';
@@ -37,9 +37,6 @@ const DANGER = COLORS.danger;
 const DANGER_SOFT = 'rgba(239,68,68,0.12)';
 const AMBER = '#D97706';
 const AMBER_SOFT = 'rgba(217,119,6,0.12)';
-const WHITE = '#FFFFFF';
-const HERO_GLASS_BG = 'rgba(255,255,255,0.16)';
-const HERO_GLASS_BORDER = 'rgba(255,255,255,0.28)';
 
 const STATUS_COLORS: Record<ChildStatus, { dot: string; chipBg: string; chipText: string; label: string }> = {
   active: { dot: EMERALD, chipBg: EMERALD_SOFT, chipText: EMERALD, label: 'Active' },
@@ -57,14 +54,6 @@ function colorForKey(key: string): string {
   return SECTION_PALETTE[hash % SECTION_PALETTE.length];
 }
 
-// The parallax hero (header + search) is a separate Animated layer behind
-// the list, same technique as PrayerTimesDetailScreen: it travels at half
-// scroll speed and fades to nothing, while the header/search content -
-// inside the FlatList's own ListHeaderComponent - scrolls away at normal
-// speed on top of it.
-const HERO_HEIGHT = 150;
-const PARALLAX_FACTOR = 0.5;
-
 function formatJoined(dateStr?: string | null): string | null {
   if (!dateStr) return null;
   const d = new Date(dateStr);
@@ -75,9 +64,6 @@ function formatJoined(dateStr?: string | null): string | null {
 // --- Inline stroke icons, matching the app's existing SVG icon style ---
 function IconPlus({ color }: { color: string }) {
   return <Plus size={19} color={color} strokeWidth={2.4} />;
-}
-function IconChevronLeft({ color }: { color: string }) {
-  return <ChevronLeft size={22} color={color} strokeWidth={2.4} />;
 }
 function IconChevronRight({ color }: { color: string }) {
   return <ChevronRight size={20} color={color} strokeWidth={2.2} />;
@@ -167,7 +153,6 @@ function FilterSheet({
  * adapts based on the logged-in admin's school.
  */
 export default function StudentListScreen() {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const route = useRoute();
   const { token, user } = useAuth();
@@ -248,45 +233,26 @@ export default function StudentListScreen() {
     });
   };
 
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const [heroHeight, setHeroHeight] = useState(HERO_HEIGHT);
-
-  const bgTranslateY = scrollY.interpolate({
-    inputRange: [0, heroHeight],
-    outputRange: [0, -heroHeight * PARALLAX_FACTOR],
-    extrapolate: 'clamp',
-  });
-  const bgOpacity = scrollY.interpolate({
-    inputRange: [0, heroHeight * 0.6, heroHeight],
-    outputRange: [1, 1, 0],
-    extrapolate: 'clamp',
-  });
-
   const listHeader = (
-    <View onLayout={(e) => setHeroHeight(e.nativeEvent.layout.height)}>
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={10}>
-          <IconChevronLeft color={WHITE} />
-          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>{title}</Text>
-        <View style={styles.headerRightRow}>
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => (navigation as any).navigate('Admission')}
-            hitSlop={8}
-          >
-            <IconPlus color="#FFFFFF" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterBtn, isFilterActive && styles.filterBtnActive]}
-            onPress={() => setFilterSheetOpen(true)}
-            hitSlop={8}
-          >
-            <IconFilter color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      </View>
+    <>
+      <ScreenHeader
+        title={title}
+        caption={t('student_list.search_caption', 'Search and manage every {title}.').replace('{title}', title.toLowerCase())}
+        rightAction={
+          <>
+            <TouchableOpacity style={styles.addBtn} onPress={() => (navigation as any).navigate('Admission')} hitSlop={8}>
+              <IconPlus color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterBtn, isFilterActive && styles.filterBtnActive]}
+              onPress={() => setFilterSheetOpen(true)}
+              hitSlop={8}
+            >
+              <IconFilter color={isFilterActive ? '#FFFFFF' : EMERALD} />
+            </TouchableOpacity>
+          </>
+        }
+      />
 
       <View style={styles.searchWrap}>
         <IconSearch color={SUBTLE} />
@@ -299,24 +265,12 @@ export default function StudentListScreen() {
           autoCorrect={false}
         />
       </View>
-    </View>
+    </>
   );
 
   return (
     <View style={styles.flex}>
-      <Animated.View
-        style={[
-          styles.bgLayer,
-          { height: heroHeight, transform: [{ translateY: bgTranslateY }], opacity: bgOpacity },
-        ]}
-      >
-        <LinearGradient
-          colors={[BRAND.emerald, BRAND.emeraldDeep]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
+      <GlassBackground variant="canvas" />
 
       {isLoading ? (
         <View style={styles.flex1}>
@@ -355,19 +309,15 @@ export default function StudentListScreen() {
           </View>
         </View>
       ) : (
-        <Animated.FlatList
+        <FlatList
           data={filtered}
-          keyExtractor={(item: StudentSummary) => String(item.id)}
+          keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={listHeader}
-          onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-            useNativeDriver: true,
-          })}
-          scrollEventThrottle={16}
           refreshControl={
             <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={EMERALD} />
           }
-          renderItem={({ item }: { item: StudentSummary }) => {
+          renderItem={({ item }) => {
             const status = item.status ?? 'active';
             const joined = formatJoined(item.joined_date);
             // Was three separate colored chips - collapsed into the single
@@ -462,35 +412,15 @@ export default function StudentListScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: CANVAS },
+  flex: { flex: 1, backgroundColor: 'transparent' },
   flex1: { flex: 1 },
-  bgLayer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    overflow: 'hidden',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  backBtn: { flexDirection: 'row', alignItems: 'center', minWidth: 64 },
-  backText: { color: WHITE, fontSize: 15, fontWeight: '600', marginLeft: 2 },
-  title: { fontSize: 18, fontWeight: '700', color: WHITE },
-  headerRightRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   addBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: HERO_GLASS_BG,
-    borderWidth: 1,
-    borderColor: HERO_GLASS_BORDER,
+    backgroundColor: EMERALD,
   },
   filterBtn: {
     width: 38,
@@ -498,19 +428,17 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: HERO_GLASS_BG,
-    borderWidth: 1,
-    borderColor: HERO_GLASS_BORDER,
+    backgroundColor: EMERALD_SOFT,
   },
-  filterBtnActive: { backgroundColor: 'rgba(255,255,255,0.34)' },
+  filterBtnActive: { backgroundColor: EMERALD },
 
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.surface,
     borderRadius: RADIUS.pill,
-    marginHorizontal: 16,
-    marginBottom: 14,
+    marginHorizontal: 20,
+    marginTop: 16,
     paddingHorizontal: 16,
     height: 46,
     gap: 10,

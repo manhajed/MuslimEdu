@@ -8,6 +8,7 @@ import { useLocale } from '../../context/LocaleContext';
 import { useAcademicGlassTheme, AcademicGlassTheme } from '../teachers/academicGlassTheme';
 import { RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import ScreenHeader from '../../components/ScreenHeader';
 import { Skeleton } from '../../components/Skeleton';
 import { EmptyState } from '../../components/EmptyState';
 import BottomNavBar from '../../components/BottomNavBar';
@@ -170,13 +171,12 @@ export default function GradingSystemsScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={[styles.header, { paddingTop: insets.top }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-            <IconChevronLeft color={theme.textPrimary} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.headerTitleFlex]}>{t('grading_systems.title', 'Grading Systems')}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        <ScreenHeader
+          title={t('grading_systems.title', 'Grading Systems')}
+          ink={theme.textPrimary}
+          subtle={theme.textSecondary}
+          backBg={theme.surface}
+        />
         <View style={styles.listContainer}>{[0, 1, 2].map(renderSkeletonCard)}</View>
         <BottomNavBar />
       </View>
@@ -186,18 +186,21 @@ export default function GradingSystemsScreen() {
   return (
     <View style={styles.container}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.backButton}>
-          <IconChevronLeft color={theme.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, styles.headerTitleFlex]}>Grading Systems</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => (navigation as any).navigate('GradingSystemWizard')}
-        >
-          <Text style={styles.addButtonText}>+ {t('common.add', 'Add')}</Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title={t('grading_systems.title', 'Grading Systems')}
+        caption={t('grading_systems.helper', 'Define how grades are computed and labeled. Tap a system to build or version its grade scale.')}
+        ink={theme.textPrimary}
+        subtle={theme.textSecondary}
+        backBg={theme.surface}
+        rightAction={
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => (navigation as any).navigate('GradingSystemWizard')}
+          >
+            <Text style={styles.addButtonText}>+ {t('common.add', 'Add')}</Text>
+          </TouchableOpacity>
+        }
+      />
 
       {error ? (
         <View style={styles.errorBanner}>
@@ -207,10 +210,6 @@ export default function GradingSystemsScreen() {
           </TouchableOpacity>
         </View>
       ) : null}
-
-      <Text style={styles.helperText}>
-        {t('grading_systems.helper', 'Define how grades are computed and labeled. Tap a system to build or version its grade scale.')}
-      </Text>
 
       <FlatList
         data={systems}

@@ -19,6 +19,7 @@ import UserAvatar from '../../components/UserAvatar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SHADOW, GLASS, COLORS, RADIUS } from '../../theme/glass';
 import GlassBackground from '../../components/glass/GlassBackground';
+import ScreenHeader from '../../components/ScreenHeader';
 import AccountWizardSheet, { WizardStepDef, wizardFieldStyles } from '../../components/wizard/AccountWizardSheet';
 
 const EMERALD = COLORS.emerald;
@@ -291,18 +292,14 @@ export default function RegistrarAccountsScreen() {
   return (
     <View style={styles.flex}>
       <GlassBackground variant="canvas" />
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={10}>
-          <ChevronLeftIcon color={EMERALD} />
-          <Text style={styles.backText}>{t('common.back', 'Back')}</Text>
-        </TouchableOpacity>
-        <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>{t('registrar_accounts.header_title', 'Registrars')}</Text>
-        </View>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setAddSheetOpen(true)} hitSlop={8}>
-          <PlusIcon color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title={t('registrar_accounts.header_title', 'Registrars')}
+        rightAction={
+          <TouchableOpacity style={styles.addBtn} onPress={() => setAddSheetOpen(true)} hitSlop={8}>
+            <PlusIcon color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       <View style={styles.searchWrap}>
         <SearchIcon color={SUBTLE} />
