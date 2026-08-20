@@ -141,6 +141,9 @@ export default function SubscriptionStatusCard({
   const isTappable = showSubscribeCta || showDetailsCta;
   const Container = isTappable ? TouchableOpacity : View;
   const iconGradient = pillTone === 'active' ? EMERALD_GRADIENT : pillTone === 'expired' ? DANGER_GRADIENT : GRAY_GRADIENT;
+  // Only an active plan gets the emerald glow - "no subscription"/expired
+  // read as plain dark-grey/red so the glow itself signals "you're covered".
+  const showGlow = pillTone === 'active';
 
   return (
     <Container
@@ -148,7 +151,12 @@ export default function SubscriptionStatusCard({
       {...(isTappable ? { activeOpacity: 0.88, onPress: showDetailsCta ? onDetailsPress : onSubscribePress } : {})}
     >
       <LinearGradient colors={GRADIENT_BLACK} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
-        <LinearGradient colors={iconGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.iconWrap}>
+        <LinearGradient
+          colors={iconGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.iconWrap, showGlow && styles.iconGlow]}
+        >
           <CreditCard size={20} color="#FFFFFF" strokeWidth={1.8} />
         </LinearGradient>
         <View style={styles.textWrap}>
@@ -186,7 +194,7 @@ const AMBER = '#F59E0B';
 const AMBER_GRADIENT = ['#F59E0B', '#B45309'] as const;
 const EMERALD_GRADIENT = [COLORS.emerald, '#0F7A3D'] as const;
 const DANGER_GRADIENT = ['#F87171', '#B91C1C'] as const;
-const GRAY_GRADIENT = ['#9CA3AF', '#6B7280'] as const;
+const GRAY_GRADIENT = ['#4B5563', '#282C31'] as const;
 
 const styles = StyleSheet.create({
   cardShadow: {
