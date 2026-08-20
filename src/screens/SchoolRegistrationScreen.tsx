@@ -25,6 +25,7 @@ import { useLocale } from '../context/LocaleContext';
 import { BRAND, COLORS, RADIUS, SHADOW } from '../theme/glass';
 import GlassBackground from '../components/glass/GlassBackground';
 import { preparePostPhoto, InvalidPhotoTypeError } from '../utils/imagePrep';
+import { ensureCameraPermission } from '../utils/cameraPermission';
 import { submitSchoolRegistration, SchoolRegistrationInput } from '../services/schoolRegistrationService';
 import {
   WizardGradientButton as GradientButton,
@@ -414,6 +415,25 @@ export default function SchoolRegistrationScreen() {
   };
 
   const capturePhoto = async (target: 'id' | 'selfie', source: 'camera' | 'library') => {
+    // Must run BEFORE launchCamera: the picker only checks this permission,
+    // it never prompts for it (see ensureCameraPermission's note), so without
+    // this the camera silently no-ops on Android.
+    if (source === 'camera') {
+      const permission = await ensureCameraPermission();
+      if (permission !== 'granted') {
+        Alert.alert(
+          t('school_registration.camera_denied_title', 'Camera access needed'),
+          permission === 'blocked'
+            ? t(
+                'school_registration.camera_blocked_body',
+                'Camera access is turned off for MuslimEdu. Enable it in your device Settings > Apps > MuslimEdu > Permissions to continue.',
+              )
+            : t('school_registration.camera_denied_body', 'We need your camera to take this photo.'),
+        );
+        return;
+      }
+    }
+
     const setPicking = target === 'id' ? setPickingId : setPickingSelfie;
     setPicking(true);
     try {
@@ -421,8 +441,20 @@ export default function SchoolRegistrationScreen() {
         source === 'camera'
           ? await launchCamera({ mediaType: 'photo', quality: 0.9, cameraType: target === 'selfie' ? 'front' : 'back', saveToPhotos: false })
           : await launchImageLibrary({ mediaType: 'photo', selectionLimit: 1, quality: 0.9 });
+
+      if (result.didCancel) return;
+      // Surfacing this instead of returning silently - swallowing errorCode is
+      // what made a blocked camera look like a dead button.
+      if (result.errorCode) {
+        Alert.alert(
+          t('school_registration.camera_error_title', "Couldn't open the camera"),
+          result.errorMessage ?? t('common.try_again_full', 'Please try again.'),
+        );
+        return;
+      }
+
       const asset = result.assets?.[0];
-      if (result.didCancel || result.errorCode || !asset?.uri) return;
+      if (!asset?.uri) return;
 
       const prepared = await preparePostPhoto(asset.uri, asset.fileName, asset.type, asset.fileSize);
       const photo: PickedPhoto = { uri: prepared.uri, fileName: prepared.fileName, type: prepared.type };
