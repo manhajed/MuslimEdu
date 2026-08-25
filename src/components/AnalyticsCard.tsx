@@ -114,7 +114,7 @@ function SchoolIdentityStrip({ school, onEdit }: { school: SchoolProfile; onEdit
           {school.name ? (
             <Text style={styles.schoolInitials}>{schoolInitials(school.name)}</Text>
           ) : (
-            <SchoolGlyph color={PALE_GREEN} size={18} strokeWidth={1.8} />
+            <SchoolGlyph color="#FFFFFF" size={18} strokeWidth={1.8} />
           )}
         </View>
       )}
@@ -134,7 +134,7 @@ function SchoolIdentityStrip({ school, onEdit }: { school: SchoolProfile; onEdit
         android_ripple={{ color: 'rgba(255,255,255,0.15)', radius: 18 }}
         style={({ pressed }) => [styles.editBtn, pressed && { opacity: 0.7 }]}
       >
-        <PencilIcon color={PALE_GREEN} />
+        <PencilIcon color="#FFFFFF" />
       </Pressable>
     </View>
   );
@@ -239,14 +239,14 @@ export default function AnalyticsCard({ token }: { token: string }) {
 
       <TouchableOpacity style={styles.headerRow} activeOpacity={0.85} onPress={goToAnalytics}>
         <View style={styles.iconBox}>
-          <ChartIcon color={PALE_GREEN} />
+          <ChartIcon color="#FFFFFF" />
         </View>
         <View style={{ flex: 1, marginLeft: 14 }}>
           <Text style={styles.label}>SCHOOL ANALYTICS</Text>
           <Text style={styles.title}>Academic Analytics</Text>
         </View>
         <PressScaleCircle onPress={goToAnalytics}>
-          <ArrowRight color={PALE_GREEN} />
+          <ArrowRight color="#FFFFFF" />
         </PressScaleCircle>
       </TouchableOpacity>
 
@@ -255,9 +255,9 @@ export default function AnalyticsCard({ token }: { token: string }) {
       {hasData ? (
         <>
           <View style={styles.statsRow}>
-            <StatChip icon={<StudentsIcon color={PALE_GREEN} />} value={String(students)} label="Students" />
+            <StatChip icon={<StudentsIcon color="#FFFFFF" />} value={String(students)} label="Students" />
             <StatChip
-              icon={<AttendanceIcon color={PALE_GREEN} />}
+              icon={<AttendanceIcon color="#FFFFFF" />}
               value={attendanceRate == null ? '—' : `${attendanceRate}%`}
               label="Attendance"
             />
@@ -267,11 +267,11 @@ export default function AnalyticsCard({ token }: { token: string }) {
             <View style={styles.schoolInfoSection}>
               <Text style={styles.schoolInfoLabel}>SCHOOL OVERVIEW</Text>
               <View style={styles.miniStatsRow}>
-                <MiniStat icon={<TeachersIcon color={PALE_GREEN} />} value={String(teachers)} label="Teachers" />
+                <MiniStat icon={<TeachersIcon color="#FFFFFF" />} value={String(teachers)} label="Teachers" />
                 <View style={styles.miniStatDivider} />
-                <MiniStat icon={<SectionsIcon color={PALE_GREEN} />} value={String(sections)} label="Sections" />
+                <MiniStat icon={<SectionsIcon color="#FFFFFF" />} value={String(sections)} label="Sections" />
                 <View style={styles.miniStatDivider} />
-                <MiniStat icon={<SubjectsIcon color={PALE_GREEN} />} value={String(subjects)} label="Subjects" />
+                <MiniStat icon={<SubjectsIcon color="#FFFFFF" />} value={String(subjects)} label="Subjects" />
               </View>
             </View>
           ) : null}
