@@ -29,10 +29,7 @@
 <div id="utilHeaderWrap"></div>
 
 <div class="util-body" id="utilBody" style="display:none;">
-  <div class="placeholder-center">
-    <div class="placeholder-title" data-i18n="translation_dashboard.title">Translation Service</div>
-    <div class="placeholder-subtitle" data-i18n="translation_dashboard.subtitle">This feature is enabled for your school. Document translation request management is coming soon.</div>
-  </div>
+  <div id="groupsWrap"></div>
 </div>
 
 <script src="dashboard.js"></script>

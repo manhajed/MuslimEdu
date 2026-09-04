@@ -1237,6 +1237,87 @@ function resyncSchoolFeature(token, schoolId, feature) {
 }
 function fetchTaqdimOverview(token) { return authedPost('/taqdim_overview', token); }
 function fetchTranslationOverview(token) { return authedPost('/translation_overview', token); }
+function fetchQuranTrackerOverview(token) { return authedPost('/quran_tracker_overview', token); }
+
+// Taqdim Assistant / Translation Service - per-school application
+// workflow (TaqdimTranslationRequirementController /
+// TaqdimTranslationApplicationController). `feature` is always 'taqdim'
+// or 'translation' throughout - the two services share one set of
+// endpoints instead of duplicating them, same as the backend tables.
+//
+// School admin: requirements checklist setup.
+function fetchTaqdimTranslationRequirements(token, feature) {
+  return authedPost('/taqdim_translation_requirement_list', token, { feature }).then(d => d.requirements || []);
+}
+function createTaqdimTranslationRequirement(token, input) {
+  return authedPost('/taqdim_translation_requirement_create', token, input).then(d => d.requirement);
+}
+function updateTaqdimTranslationRequirement(token, requirementId, input) {
+  return authedPost('/taqdim_translation_requirement_update', token, { requirement_id: requirementId, ...input }).then(d => d.requirement);
+}
+function deleteTaqdimTranslationRequirement(token, requirementId) {
+  return authedPost('/taqdim_translation_requirement_delete', token, { requirement_id: requirementId });
+}
+
+// Student: application lifecycle.
+function startTaqdimTranslationApplication(token, feature) {
+  return authedPost('/taqdim_translation_application_start', token, { feature }).then(d => d.application);
+}
+function fetchMyTaqdimTranslationApplications(token, feature) {
+  return authedPost('/taqdim_translation_application_list', token, feature ? { feature } : {}).then(d => d.applications || []);
+}
+function fetchMyTaqdimTranslationApplication(token, applicationId) {
+  return authedPost('/taqdim_translation_application_show', token, { application_id: applicationId }).then(d => d.application);
+}
+function updateTaqdimTranslationChecklistItem(token, itemId, fields) {
+  return authedPost('/taqdim_translation_application_checklist_update', token, { item_id: itemId, ...fields }).then(d => d.item);
+}
+function submitTaqdimTranslationApplication(token, applicationId) {
+  return authedPost('/taqdim_translation_application_submit', token, { application_id: applicationId }).then(d => d.application);
+}
+function withdrawTaqdimTranslationApplication(token, applicationId) {
+  return authedPost('/taqdim_translation_application_withdraw', token, { application_id: applicationId }).then(d => d.application);
+}
+
+// Student: document vault (category = taqdim | translation on
+// user_documents). Multipart, same shape as uploadScholarshipDocument.
+function uploadTaqdimTranslationDocument(token, feature, file, title) {
+  const form = new FormData();
+  form.append('feature', feature);
+  form.append('file', file, file.name || 'document.pdf');
+  if (title) form.append('title', title);
+  return fetch(API_BASE_URL + '/taqdim_translation_document_upload', {
+    method: 'POST',
+    headers: { Accept: 'application/json', Authorization: 'Bearer ' + token },
+    body: form,
+  }).then(res => res.json().catch(() => ({})).then(data => {
+    if (!res.ok) throw new Error((data && data.message) || 'Request failed (' + res.status + ')');
+    return data.document;
+  }));
+}
+function fetchMyTaqdimTranslationDocuments(token, feature) {
+  return authedPost('/taqdim_translation_document_list', token, { feature }).then(d => d.documents || []);
+}
+function deleteTaqdimTranslationDocument(token, documentId) {
+  return authedPost('/taqdim_translation_document_delete', token, { document_id: documentId });
+}
+
+// School admin: review queue.
+function fetchAdminTaqdimTranslationApplications(token, filters) {
+  return authedPost('/admin_taqdim_translation_application_list', token, filters || {}).then(d => d.applications || []);
+}
+function fetchAdminTaqdimTranslationApplication(token, applicationId) {
+  return authedPost('/admin_taqdim_translation_application_show', token, { application_id: applicationId }).then(d => d.application);
+}
+function assignTaqdimTranslationApplication(token, applicationId, staffId) {
+  return authedPost('/admin_taqdim_translation_application_assign', token, { application_id: applicationId, staff_id: staffId }).then(d => d.application);
+}
+function advanceTaqdimTranslationApplicationStatus(token, applicationId, status, note) {
+  return authedPost('/admin_taqdim_translation_application_advance_status', token, { application_id: applicationId, status, note }).then(d => d.application);
+}
+function reviewTaqdimTranslationChecklistItem(token, itemId, isCompleted, notes) {
+  return authedPost('/admin_taqdim_translation_checklist_item_review', token, { item_id: itemId, is_completed: isCompleted, notes }).then(d => d.item);
+}
 
 // Scholarship & Taqdim Assistant - staff catalog management (providers,
 // programs, requirements). Reachable by the primary SuperAdmin and by any

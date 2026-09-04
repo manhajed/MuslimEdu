@@ -57,12 +57,16 @@
       { title: t('student_dashboard.services_title', 'Services'), desc: t('student_dashboard.services_desc', 'Guidance, counselling and other requests'), icon: 'clipboard', tint: TINT.pink, href: 'student-services.php' },
     ];
 
-    // Add Taqdim and Translation if school has these features enabled
+    // Add Taqdim and Translation if school has these features enabled.
+    // taqdim-dashboard.php/translation-dashboard.php are the school
+    // admin's landing pages (guardDashboard('admin') - see those files);
+    // a student's own application lives on the shared
+    // taqdim-translation-application.php, parameterized by ?feature=.
     if (hasTaqdim) {
-      supportItems.push({ title: t('student_dashboard.taqdim_title', 'Taqdim Assistant'), desc: t('student_dashboard.taqdim_desc', 'Track your Taqdim applications and progress'), icon: 'star', tint: TINT.indigo, href: 'taqdim-dashboard.php' });
+      supportItems.push({ title: t('student_dashboard.taqdim_title', 'Taqdim Assistant'), desc: t('student_dashboard.taqdim_desc', 'Track your Taqdim applications and progress'), icon: 'star', tint: TINT.indigo, href: 'taqdim-translation-application.php?feature=taqdim' });
     }
     if (hasTranslation) {
-      supportItems.push({ title: t('student_dashboard.translation_title', 'Translation Service'), desc: t('student_dashboard.translation_desc', 'Access translation and document services'), icon: 'globe', tint: TINT.teal, href: 'translation-dashboard.php' });
+      supportItems.push({ title: t('student_dashboard.translation_title', 'Translation Service'), desc: t('student_dashboard.translation_desc', 'Access translation and document services'), icon: 'globe', tint: TINT.teal, href: 'taqdim-translation-application.php?feature=translation' });
     }
 
     supportItems.push(

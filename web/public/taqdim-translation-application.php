@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Taqdim Assistant — MuslimEdu</title>
+<title>Application — MuslimEdu</title>
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; worker-src 'self'; manifest-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://manhaje.com; connect-src 'self' https://manhaje.com; base-uri 'none'; form-action 'none'; upgrade-insecure-requests" />
 <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
 <script src="pwa-guard.js"></script>
@@ -29,11 +29,13 @@
 <div id="utilHeaderWrap"></div>
 
 <div class="util-body" id="utilBody" style="display:none;">
-  <div id="groupsWrap"></div>
+  <div id="appContent"></div>
 </div>
 
+<div id="bottomNavWrap"></div>
+
 <script src="dashboard.js"></script>
-<script src="taqdim-dashboard.js"></script>
+<script src="taqdim-translation-application.js"></script>
 <script src="pwa.js" defer></script>
 </body>
 </html>
