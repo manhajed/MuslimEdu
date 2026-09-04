@@ -100,11 +100,22 @@ function taqdimChatRenderMessageBody(text) {
   return html || '<div class="taqdim-chat-msg-text">&nbsp;</div>';
 }
 
-function taqdimChatRenderMessage(msg) {
-  const isOwn = !!msg.is_mine;
-  const senderLabel = isOwn ? t('taqdim_translation_chat.you', 'You') : (taqdimChatState.otherUserName || t('taqdim_translation_chat.them', 'Them'));
-  return '<div class="taqdim-chat-msg ' + (isOwn ? 'taqdim-chat-msg-own' : 'taqdim-chat-msg-other') + '">' +
-    '<div class="taqdim-chat-msg-sender">' + escapeHtml(senderLabel) + ' · ' + escapeHtml(taqdimChatFormatTime(msg.created_at) || '') + '</div>' +
+// Messenger-style grouping: consecutive messages from the same sender
+// within 5 minutes of each other are one visual "run" - one timestamp
+// and (for the other person) one sender label for the whole run, and
+// only the last bubble in the run gets the tight "tail" corner.
+function taqdimChatStartsNewGroup(prev, curr) {
+  if (!prev || !curr) return true;
+  if (!!prev.is_mine !== !!curr.is_mine) return true;
+  const prevTime = new Date((prev.created_at || '').replace(' ', 'T')).getTime();
+  const currTime = new Date((curr.created_at || '').replace(' ', 'T')).getTime();
+  if (!isFinite(prevTime) || !isFinite(currTime)) return true;
+  return (currTime - prevTime) > 5 * 60 * 1000;
+}
+
+function taqdimChatRenderMessage(msg, isOwn, isTail) {
+  const tailClass = isTail ? (isOwn ? ' taqdim-chat-msg-own-tail' : ' taqdim-chat-msg-other-tail') : '';
+  return '<div class="taqdim-chat-msg ' + (isOwn ? 'taqdim-chat-msg-own' : 'taqdim-chat-msg-other') + tailClass + '">' +
     taqdimChatRenderMessageBody(msg.message || '') +
   '</div>';
 }
@@ -112,9 +123,26 @@ function taqdimChatRenderMessage(msg) {
 function taqdimChatRenderMessages() {
   const wrap = document.getElementById('taqdimChatMessages');
   if (!wrap) return;
-  wrap.innerHTML = taqdimChatState.messages.length
-    ? taqdimChatState.messages.map(taqdimChatRenderMessage).join('')
-    : '<div class="list-card-meta" style="text-align:center;padding:16px;">' + escapeHtml(t('taqdim_translation_chat.empty', 'No messages yet. Say hello to start the conversation.')) + '</div>';
+  const msgs = taqdimChatState.messages;
+  if (!msgs.length) {
+    wrap.innerHTML = '<div class="list-card-meta" style="text-align:center;padding:16px;">' + escapeHtml(t('taqdim_translation_chat.empty', 'No messages yet. Say hello to start the conversation.')) + '</div>';
+    return;
+  }
+  let html = '';
+  msgs.forEach((msg, i) => {
+    const isOwn = !!msg.is_mine;
+    const isNewGroup = taqdimChatStartsNewGroup(i > 0 ? msgs[i - 1] : null, msg);
+    const isGroupEnd = taqdimChatStartsNewGroup(msg, i < msgs.length - 1 ? msgs[i + 1] : null);
+    if (isNewGroup) {
+      html += '<div class="taqdim-chat-timestamp">' + escapeHtml(taqdimChatFormatTime(msg.created_at) || '') + '</div>';
+      if (!isOwn) {
+        const senderLabel = taqdimChatState.otherUserName || t('taqdim_translation_chat.them', 'Them');
+        html += '<div class="taqdim-chat-sender-label">' + escapeHtml(senderLabel) + '</div>';
+      }
+    }
+    html += taqdimChatRenderMessage(msg, isOwn, isGroupEnd);
+  });
+  wrap.innerHTML = html;
   wrap.scrollTop = wrap.scrollHeight;
 }
 
@@ -137,13 +165,17 @@ function taqdimChatRenderInputArea() {
     return;
   }
   area.innerHTML =
-    '<textarea id="taqdimChatInput" class="taqdim-chat-input" placeholder="' + escapeHtml(t('taqdim_translation_chat.type_message', 'Type a message…')) + '" maxlength="' + TAQDIM_CHAT_MAX_MESSAGE_LENGTH + '"></textarea>' +
     (taqdimChatState.isAdmin
-      ? '<div style="font-size:11px;color:var(--subtle);margin-top:4px;">' +
+      ? '<div class="taqdim-chat-admin-hint">' +
           escapeHtml(t('taqdim_translation_chat.admin_hint', 'Tip: [FILE:name.pdf] to note a file, [CREDS:user:pass] to share portal login, [LOCK_NOTE:reason] to lock, [UNLOCK] to unlock.')) +
         '</div>'
       : '') +
-    '<button type="button" id="taqdimChatSendBtn" class="util-save-btn pill" style="margin-top:8px;width:100%;height:40px;font-size:13px;">' + escapeHtml(t('common.send', 'Send')) + '</button>';
+    '<div class="taqdim-chat-input-row">' +
+      '<textarea id="taqdimChatInput" class="taqdim-chat-input" rows="1" placeholder="' + escapeHtml(t('taqdim_translation_chat.type_message', 'Type a message…')) + '" maxlength="' + TAQDIM_CHAT_MAX_MESSAGE_LENGTH + '"></textarea>' +
+      '<button type="button" id="taqdimChatSendBtn" class="taqdim-chat-send-btn" aria-label="' + escapeHtml(t('common.send', 'Send')) + '">' +
+        '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.75 12.25 20.5 4l-6.75 17.5-3-7.25-7-2Z"/></svg>' +
+      '</button>' +
+    '</div>';
 
   document.getElementById('taqdimChatSendBtn').addEventListener('click', taqdimChatSend);
   document.getElementById('taqdimChatInput').addEventListener('keydown', (e) => {
