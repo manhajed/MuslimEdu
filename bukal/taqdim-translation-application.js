@@ -24,6 +24,10 @@ let myDocumentsById = {};
 // Set when the student has just sent their request, so the reload that
 // follows drops them straight into the support chat.
 let openChatAfterRender = false;
+// Which checklist requirement the wizard is showing. Survives the reload
+// that follows an upload, so the student stays on the step they were on.
+let wizardStep = 0;
+let wizardResumed = false;
 
 function formatDate(d) {
   if (!d) return null;
@@ -62,8 +66,8 @@ function renderHistoryHtml(history) {
   return '<div class="util-section-title" style="margin-top:18px;">' + escapeHtml(t('taqdim_translation_application.history_section', 'Status History')) + '</div><div class="util-card">' + rows + '</div>';
 }
 
-// ── Checklist item renderer ──
-function renderChecklistItemHtml(item, editable) {
+// ── Checklist item renderer (read-only view, once the request is sent) ──
+function renderChecklistItemHtml(item) {
   const statusIcon = item.is_completed
     ? icon('checkcircle', { size: 18, color: 'var(--emerald-deep)' })
     : icon('close', { size: 18, color: item.is_required ? '#EF4444' : 'var(--subtle)' });
@@ -71,16 +75,14 @@ function renderChecklistItemHtml(item, editable) {
   let bodyHtml = '';
   if (item.requirement_type === 'document') {
     const doc = item.document_id ? myDocumentsById[item.document_id] : null;
-    bodyHtml =
-      (doc ? '<div class="list-card-meta" style="margin:4px 0;">' + escapeHtml(doc.title || t('taqdim_translation_application.file_attached', 'File attached')) +
-        ' · <a href="' + escapeHtml(doc.file) + '" target="_blank">' + escapeHtml(t('taqdim_translation_application.view_link', 'View')) + '</a></div>' : '') +
-      (editable ? '<div class="util-file-input-row" style="margin-top:6px;"><input type="file" class="itemFileInput" data-item-id="' + item.id + '" /></div>' +
-        '<button type="button" class="util-save-btn pill itemUploadBtn" data-item-id="' + item.id + '" style="margin-top:8px;height:40px;font-size:13px;"><span class="itemUploadLabel">' + escapeHtml(doc ? t('taqdim_translation_application.replace_btn', 'Replace File') : t('taqdim_translation_application.upload_btn', 'Upload')) + '</span></button>' : '');
+    bodyHtml = doc
+      ? '<div class="list-card-meta" style="margin:4px 0;">' + escapeHtml(doc.title || t('taqdim_translation_application.file_attached', 'File attached')) +
+        ' · <a href="' + escapeHtml(doc.file) + '" target="_blank">' + escapeHtml(t('taqdim_translation_application.view_link', 'View')) + '</a></div>'
+      : '';
   } else { // statement
-    bodyHtml = editable
-      ? '<textarea class="util-input itemStatementInput" data-item-id="' + item.id + '" placeholder="' + escapeHtml(t('taqdim_translation_application.statement_placeholder', 'Write your answer here')) + '" style="margin-top:6px;">' + escapeHtml(item.statement_text || '') + '</textarea>' +
-        '<button type="button" class="util-save-btn pill itemSaveStatementBtn" data-item-id="' + item.id + '" style="margin-top:8px;height:40px;font-size:13px;"><span class="itemSaveStatementLabel">' + escapeHtml(t('common.save', 'Save')) + '</span></button>'
-      : (item.statement_text ? '<div class="list-card-meta" style="margin-top:4px;white-space:pre-wrap;">' + escapeHtml(item.statement_text) + '</div>' : '');
+    bodyHtml = item.statement_text
+      ? '<div class="list-card-meta" style="margin-top:4px;white-space:pre-wrap;">' + escapeHtml(item.statement_text) + '</div>'
+      : '';
   }
 
   return (
@@ -95,6 +97,78 @@ function renderChecklistItemHtml(item, editable) {
           bodyHtml +
         '</div>' +
       '</div>' +
+    '</div>'
+  );
+}
+
+// ── Wizard (editable view) ──
+// The school's checklist is walked one requirement at a time instead of
+// dumped as one long form: a document step uploads as soon as a file is
+// picked, and Continue moves to the next requirement the admin configured.
+const TT_UPLOAD_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>';
+
+function renderWizardItemCard(item) {
+  const badge = item.is_completed
+    ? '<span class="tt-badge tt-badge-done">' + icon('checkcircle', { size: 12, color: '#065F46' }) + escapeHtml(t('taqdim_translation_application.completed_chip', 'Completed')) + '</span>'
+    : (item.is_required
+      ? '<span class="tt-badge tt-badge-required">' + escapeHtml(t('taqdim_translation_application.required_chip', 'Required')) + '</span>'
+      : '<span class="tt-badge tt-badge-optional">' + escapeHtml(t('taqdim_translation_application.optional_chip', 'Optional')) + '</span>');
+
+  let bodyHtml = '';
+  if (item.requirement_type === 'document') {
+    const doc = item.document_id ? myDocumentsById[item.document_id] : null;
+    bodyHtml =
+      (doc
+        ? '<div class="tt-file-chip">' + icon('filetext', { size: 16, color: '#1D4ED8' }) +
+            '<span class="tt-file-name">' + escapeHtml(doc.title || t('taqdim_translation_application.file_attached', 'File attached')) + '</span>' +
+            '<a class="tt-file-view" href="' + escapeHtml(doc.file) + '" target="_blank" rel="noopener">' + escapeHtml(t('taqdim_translation_application.view_link', 'View')) + '</a>' +
+          '</div>'
+        : '') +
+      '<label class="tt-dropzone" data-item-id="' + item.id + '">' +
+        '<input type="file" class="itemFileInput" data-item-id="' + item.id + '" hidden />' +
+        '<span class="tt-dropzone-icon">' + TT_UPLOAD_ICON_SVG + '</span>' +
+        '<span class="tt-dropzone-title">' + escapeHtml(doc
+          ? t('taqdim_translation_application.dropzone_replace', 'Tap to replace this file')
+          : t('taqdim_translation_application.dropzone_choose', 'Tap to choose a file')) + '</span>' +
+        '<span class="tt-dropzone-hint">' + escapeHtml(t('taqdim_translation_application.dropzone_hint', 'It uploads as soon as you pick it')) + '</span>' +
+      '</label>';
+  } else { // statement
+    bodyHtml =
+      '<textarea class="tt-wizard-textarea itemStatementInput" data-item-id="' + item.id + '" placeholder="' + escapeHtml(t('taqdim_translation_application.statement_placeholder', 'Write your answer here')) + '">' + escapeHtml(item.statement_text || '') + '</textarea>' +
+      '<button type="button" class="util-save-btn pill itemSaveStatementBtn" data-item-id="' + item.id + '" style="margin-top:10px;height:42px;font-size:13px;"><span class="itemSaveStatementLabel">' + escapeHtml(t('common.save', 'Save')) + '</span></button>';
+  }
+
+  return (
+    '<div class="tt-wizard-card">' +
+      '<div class="tt-wizard-badges">' + badge + '</div>' +
+      '<div class="tt-wizard-title">' + escapeHtml(item.title) + '</div>' +
+      '<div class="tt-wizard-type">' + escapeHtml(requirementTypeLabel(item.requirement_type)) + '</div>' +
+      (item.notes ? '<div class="tt-wizard-note">' + escapeHtml(t('taqdim_translation_application.revision_note_prefix', 'Staff note:')) + ' ' + escapeHtml(item.notes) + '</div>' : '') +
+      bodyHtml +
+    '</div>'
+  );
+}
+
+function renderWizardHtml(items) {
+  const total = items.length;
+  const item = items[wizardStep];
+  const doneCount = items.filter(it => it.is_completed).length;
+  const isLast = wizardStep === total - 1;
+  const blocked = item.is_required && !item.is_completed;
+
+  return (
+    '<div class="tt-wizard">' +
+      '<div class="tt-wizard-progress"><div class="tt-wizard-progress-bar" style="width:' + Math.round((doneCount / total) * 100) + '%;"></div></div>' +
+      '<div class="tt-wizard-meta">' +
+        '<span class="tt-wizard-step-count">' + escapeHtml(t('taqdim_translation_application.wizard_step', 'Step {n} of {total}').replace('{n}', String(wizardStep + 1)).replace('{total}', String(total))) + '</span>' +
+        '<span>' + escapeHtml(t('taqdim_translation_application.wizard_done', '{done} of {total} done').replace('{done}', String(doneCount)).replace('{total}', String(total))) + '</span>' +
+      '</div>' +
+      renderWizardItemCard(item) +
+      '<div class="tt-wizard-nav">' +
+        (wizardStep > 0 ? '<button type="button" class="tt-wizard-back" id="wizardBackBtn">' + escapeHtml(t('taqdim_translation_application.wizard_back', 'Back')) + '</button>' : '') +
+        (isLast ? '' : '<button type="button" class="tt-wizard-next" id="wizardNextBtn"' + (blocked ? ' disabled' : '') + '>' + escapeHtml(t('taqdim_translation_application.wizard_continue', 'Continue')) + '</button>') +
+      '</div>' +
+      (blocked && !isLast ? '<div class="tt-wizard-hint">' + escapeHtml(t('taqdim_translation_application.wizard_blocked', 'This one is required before you can continue.')) + '</div>' : '') +
     '</div>'
   );
 }
@@ -149,9 +223,25 @@ function renderApplication(token, app) {
   const editable = (TaqdimTranslationApplicationOpenStatuses()).includes(app.status);
   const items = (app.checklistItems || []).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
+  // While the draft is still being filled in, the checklist is a wizard -
+  // one requirement at a time. Once it's sent it becomes a plain summary
+  // list, since then the point is seeing everything at a glance.
+  const useWizard = editable && items.length > 0;
+  if (useWizard) {
+    // Resume on the first unfinished requirement, but only when the page
+    // first loads - later re-renders must keep the step the student is on.
+    if (!wizardResumed) {
+      wizardResumed = true;
+      const firstIncomplete = items.findIndex(it => !it.is_completed);
+      wizardStep = firstIncomplete === -1 ? items.length - 1 : firstIncomplete;
+    }
+    wizardStep = Math.min(Math.max(wizardStep, 0), items.length - 1);
+  }
+  const onLastStep = !useWizard || wizardStep === items.length - 1;
+
   const checklistHtml = items.length === 0
     ? '<div class="util-row"><span class="util-row-title" style="color:var(--subtle);">' + escapeHtml(t('taqdim_translation_application.no_checklist', 'Your school has not set up a checklist for this yet.')) + '</span></div>'
-    : items.map(item => renderChecklistItemHtml(item, editable)).join('');
+    : (useWizard ? renderWizardHtml(items) : items.map(renderChecklistItemHtml).join(''));
 
   // Once the request has been sent, the support chat is where this
   // request lives - openable straight away, showing the waiting notice
@@ -184,12 +274,12 @@ function renderApplication(token, app) {
     // backend rejects an incomplete submit with a 422 anyway
     // (applicationSubmit), so this just surfaces that rule up front
     // instead of letting the student hit an error.
-    (editable
+    (editable && onLastStep
       ? '<button type="button" class="util-save-btn pill" id="submitAppBtn" style="margin-top:20px;"' + (app.all_required_completed ? '' : ' disabled') + '><span id="submitAppLabel">' + escapeHtml(t('taqdim_translation_application.submit_btn', 'Send Request')) + '</span></button>' +
         (app.all_required_completed
           ? ''
           : '<div class="list-card-meta" style="margin-top:8px;text-align:center;">' +
-              escapeHtml(t('taqdim_translation_application.submit_blocked_hint', 'Complete every required item above to send your request.')) +
+              escapeHtml(t('taqdim_translation_application.submit_blocked_hint', 'Complete every required item to send your request.')) +
             '</div>')
       : '') +
     (!['approved', 'rejected', 'withdrawn'].includes(app.status)
@@ -252,14 +342,22 @@ function wireWithdrawButton(token) {
 function TaqdimTranslationApplicationOpenStatuses() { return ['draft', 'under_review']; }
 
 function wireChecklistEvents(token) {
-  document.querySelectorAll('.itemUploadBtn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const itemId = btn.dataset.itemId;
-      const fileInput = document.querySelector('.itemFileInput[data-item-id="' + itemId + '"]');
-      const file = fileInput && fileInput.files && fileInput.files[0];
-      if (!file) { showToast(t('taqdim_translation_application.choose_file', 'Choose a file first.')); return; }
-      const label = btn.querySelector('.itemUploadLabel');
-      btn.disabled = true; label.innerHTML = '<span class="util-spinner"></span>';
+  // No separate Upload button: picking a file starts the upload. The
+  // dropzone is swapped for a progress state, and either outcome ends in
+  // a reload, which rebuilds it either way.
+  document.querySelectorAll('.itemFileInput').forEach(input => {
+    input.addEventListener('change', () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const itemId = input.dataset.itemId;
+      const zone = document.querySelector('.tt-dropzone[data-item-id="' + itemId + '"]');
+      if (zone) {
+        zone.classList.add('is-uploading');
+        zone.innerHTML =
+          '<span class="tt-dropzone-icon"><span class="util-spinner"></span></span>' +
+          '<span class="tt-dropzone-title">' + escapeHtml(t('taqdim_translation_application.uploading', 'Uploading…')) + '</span>' +
+          '<span class="tt-dropzone-hint">' + escapeHtml(file.name) + '</span>';
+      }
       uploadTaqdimTranslationDocument(token, APP_FEATURE, file).then(doc =>
         updateTaqdimTranslationChecklistItem(token, itemId, { document_id: doc.id, is_completed: true })
       ).then(() => {
@@ -267,9 +365,19 @@ function wireChecklistEvents(token) {
         loadApplication(token);
       }).catch(err => {
         showToast(err && err.message ? err.message : t('taqdim_translation_application.upload_failed', 'Could not upload this file.'));
-        btn.disabled = false; label.textContent = t('taqdim_translation_application.upload_btn', 'Upload');
+        loadApplication(token);
       });
     });
+  });
+
+  document.getElementById('wizardBackBtn')?.addEventListener('click', () => {
+    wizardStep -= 1;
+    renderApplication(token, currentApplication);
+  });
+
+  document.getElementById('wizardNextBtn')?.addEventListener('click', () => {
+    wizardStep += 1;
+    renderApplication(token, currentApplication);
   });
 
   document.querySelectorAll('.itemSaveStatementBtn').forEach(btn => {

@@ -36,7 +36,7 @@
 
 <script src="dashboard.js"></script>
 <script src="taqdim-translation-chat.js?v=3"></script>
-<script src="taqdim-translation-applications.js"></script>
+<script src="taqdim-translation-applications.js?v=3"></script>
 <script src="pwa.js" defer></script>
 </body>
 </html>

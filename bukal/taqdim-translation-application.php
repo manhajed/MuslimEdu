@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="assets/fonts.css" />
 <link rel="stylesheet" href="dashboard.css" />
 <link rel="stylesheet" href="taqdim-translation-chat.css?v=3" />
+<link rel="stylesheet" href="taqdim-translation-wizard.css?v=3" />
 </head>
 <body>
 
@@ -37,7 +38,7 @@
 
 <script src="dashboard.js"></script>
 <script src="taqdim-translation-chat.js?v=3"></script>
-<script src="taqdim-translation-application.js"></script>
+<script src="taqdim-translation-application.js?v=3"></script>
 <script src="pwa.js" defer></script>
 </body>
 </html>
