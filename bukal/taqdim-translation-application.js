@@ -142,20 +142,32 @@ function renderWizardItemCard(item, total) {
   return (
     '<div class="tt-wizard-caption">' + escapeHtml(t('taqdim_translation_application.wizard_step', 'Step {n} of {total}').replace('{n}', String(wizardStep + 1)).replace('{total}', String(total))) + '</div>' +
     '<div class="tt-wizard-title">' + escapeHtml(item.title) + '</div>' +
-    '<div class="tt-wizard-sub">' + badge + '<span>' + escapeHtml(requirementTypeLabel(item.requirement_type)) + '</span></div>' +
+    '<div class="tt-wizard-sub">' + badge + '</div>' +
     (item.notes ? '<div class="tt-wizard-note">' + escapeHtml(t('taqdim_translation_application.revision_note_prefix', 'Staff note:')) + ' ' + escapeHtml(item.notes) + '</div>' : '') +
     bodyHtml
   );
 }
 
-function renderWizardHtml(items) {
+function renderWizardHtml(items, app) {
   const item = items[wizardStep];
   const isLast = wizardStep === items.length - 1;
   const blocked = item.is_required && !item.is_completed;
+  const canSend = !!app.all_required_completed;
 
   const segments = items.map((it, i) =>
     '<span class="tt-wizard-seg' + (it.is_completed ? ' is-done' : (i === wizardStep ? ' is-current' : '')) + '"></span>'
   ).join('');
+
+  // The last step's primary action is sending the request itself, so it
+  // sits in the same footer slot Continue occupies everywhere else
+  // rather than as an extra button further down the page.
+  const primaryBtn = isLast
+    ? '<button type="button" class="tt-wizard-next" id="submitAppBtn"' + (canSend ? '' : ' disabled') + '><span id="submitAppLabel">' + escapeHtml(t('taqdim_translation_application.submit_btn', 'Send Request')) + '</span></button>'
+    : '<button type="button" class="tt-wizard-next" id="wizardNextBtn"' + (blocked ? ' disabled' : '') + '>' + escapeHtml(t('taqdim_translation_application.wizard_continue', 'Continue')) + '</button>';
+
+  const hint = isLast
+    ? (canSend ? '' : t('taqdim_translation_application.submit_blocked_hint', 'Complete every required item to send your request.'))
+    : (blocked ? t('taqdim_translation_application.wizard_blocked', 'This one is required before you can continue.') : '');
 
   return (
     '<div class="tt-wizard">' +
@@ -163,9 +175,9 @@ function renderWizardHtml(items) {
       renderWizardItemCard(item, items.length) +
       '<div class="tt-wizard-nav">' +
         (wizardStep > 0 ? '<button type="button" class="tt-wizard-back" id="wizardBackBtn">' + escapeHtml(t('taqdim_translation_application.wizard_back', 'Back')) + '</button>' : '') +
-        (isLast ? '' : '<button type="button" class="tt-wizard-next" id="wizardNextBtn"' + (blocked ? ' disabled' : '') + '>' + escapeHtml(t('taqdim_translation_application.wizard_continue', 'Continue')) + '</button>') +
+        primaryBtn +
       '</div>' +
-      (blocked && !isLast ? '<div class="tt-wizard-hint">' + escapeHtml(t('taqdim_translation_application.wizard_blocked', 'This one is required before you can continue.')) + '</div>' : '') +
+      (hint ? '<div class="tt-wizard-hint">' + escapeHtml(hint) + '</div>' : '') +
     '</div>'
   );
 }
@@ -234,11 +246,10 @@ function renderApplication(token, app) {
     }
     wizardStep = Math.min(Math.max(wizardStep, 0), items.length - 1);
   }
-  const onLastStep = !useWizard || wizardStep === items.length - 1;
 
   const checklistHtml = items.length === 0
     ? '<div class="util-row"><span class="util-row-title" style="color:var(--subtle);">' + escapeHtml(t('taqdim_translation_application.no_checklist', 'Your school has not set up a checklist for this yet.')) + '</span></div>'
-    : (useWizard ? renderWizardHtml(items) : items.map(renderChecklistItemHtml).join(''));
+    : (useWizard ? renderWizardHtml(items, app) : items.map(renderChecklistItemHtml).join(''));
 
   // Once the request has been sent, the support chat is where this
   // request lives - openable straight away, showing the waiting notice
@@ -254,31 +265,33 @@ function renderApplication(token, app) {
           '</div>');
   }
 
+  // The wizard is deliberately the only thing on screen while the draft
+  // is being filled in: the status chips, section heading, history and
+  // Withdraw all pushed the step's own buttons below the fold. They come
+  // back in the summary view once the request has been sent.
   document.getElementById('appContent').innerHTML =
-    '<div style="padding:2px;">' +
-      '<div class="chip-row">' +
-        '<span class="mini-chip ' + appStatusChipClass(app.status) + '">' + escapeHtml(appStatusLabel(app.status)) + '</span>' +
-        '<span class="mini-chip ok">' + escapeHtml(app.reference_no || '') + '</span>' +
-      '</div>' +
-    '</div>' +
+    (useWizard
+      ? ''
+      : '<div style="padding:2px;">' +
+          '<div class="chip-row">' +
+            '<span class="mini-chip ' + appStatusChipClass(app.status) + '">' + escapeHtml(appStatusLabel(app.status)) + '</span>' +
+            '<span class="mini-chip ok">' + escapeHtml(app.reference_no || '') + '</span>' +
+          '</div>' +
+        '</div>') +
     (app.decision_note ? '<div class="util-label">' + escapeHtml(t('taqdim_translation_application.decision_note_label', 'Note from staff')) + '</div><div class="list-card-meta" style="margin-bottom:10px;">' + escapeHtml(app.decision_note) + '</div>' : '') +
-    '<div class="util-section-title" style="margin-top:14px;">' + escapeHtml(t('taqdim_translation_application.checklist_section', 'Checklist')) + '</div>' +
+    (useWizard ? '' : '<div class="util-section-title" style="margin-top:14px;">' + escapeHtml(t('taqdim_translation_application.checklist_section', 'Checklist')) + '</div>') +
     checklistHtml +
     chatHtml +
-    renderHistoryHtml(app.statusHistory) +
-    // Send stays disabled until every required item is done - the
-    // backend rejects an incomplete submit with a 422 anyway
-    // (applicationSubmit), so this just surfaces that rule up front
-    // instead of letting the student hit an error.
-    (editable && onLastStep
-      ? '<button type="button" class="util-save-btn pill" id="submitAppBtn" style="margin-top:20px;"' + (app.all_required_completed ? '' : ' disabled') + '><span id="submitAppLabel">' + escapeHtml(t('taqdim_translation_application.submit_btn', 'Send Request')) + '</span></button>' +
-        (app.all_required_completed
-          ? ''
-          : '<div class="list-card-meta" style="margin-top:8px;text-align:center;">' +
-              escapeHtml(t('taqdim_translation_application.submit_blocked_hint', 'Complete every required item to send your request.')) +
-            '</div>')
+    (useWizard ? '' : renderHistoryHtml(app.statusHistory)) +
+    // In wizard mode Send Request lives in the step footer instead; this
+    // only covers a school that has not configured any checklist at all.
+    // Send stays disabled until every required item is done - the backend
+    // rejects an incomplete submit with a 422 anyway (applicationSubmit),
+    // so this just surfaces that rule up front.
+    (editable && !useWizard
+      ? '<button type="button" class="util-save-btn pill" id="submitAppBtn" style="margin-top:20px;"' + (app.all_required_completed ? '' : ' disabled') + '><span id="submitAppLabel">' + escapeHtml(t('taqdim_translation_application.submit_btn', 'Send Request')) + '</span></button>'
       : '') +
-    (!['approved', 'rejected', 'withdrawn'].includes(app.status)
+    (!useWizard && !['approved', 'rejected', 'withdrawn'].includes(app.status)
       ? '<button type="button" class="sheet-btn-secondary" id="withdrawAppBtn" style="width:100%;margin-top:10px;">' + escapeHtml(t('taqdim_translation_application.withdraw_btn', 'Withdraw')) + '</button>'
       : '');
 
