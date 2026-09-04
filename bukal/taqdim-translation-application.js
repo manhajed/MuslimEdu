@@ -21,6 +21,9 @@ const APP_FEATURE = qsParam('feature') === 'translation' ? 'translation' : 'taqd
 
 let currentApplication = null;
 let myDocumentsById = {};
+// Set when the student has just sent their request, so the reload that
+// follows drops them straight into the support chat.
+let openChatAfterRender = false;
 
 function formatDate(d) {
   if (!d) return null;
@@ -97,13 +100,31 @@ function renderChecklistItemHtml(item, editable) {
 }
 
 // ── Chat modal ──
+// The uploaded requirements travel with the student into the chat as a
+// pinned list, so the assigned admin sees everything that was submitted
+// without leaving the conversation. Statement items have no file, so
+// they're listed as a written answer rather than a broken link.
+function buildChatAttachments(app) {
+  return (app.checklistItems || [])
+    .filter(it => it.is_completed)
+    .slice()
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+    .map(it => {
+      const doc = it.requirement_type === 'document' && it.document_id ? myDocumentsById[it.document_id] : null;
+      return { title: it.title, url: doc ? doc.file : null };
+    });
+}
+
 function openChatModal(token, app) {
   const assigneeName = (app.assignee && app.assignee.name) || '';
   const overlay = document.createElement('div');
   overlay.className = 'taqdim-chat-overlay';
   overlay.innerHTML = '<div class="taqdim-chat-modal">' +
     '<div class="taqdim-chat-close"><button type="button" id="closeChatBtn" style="background:none;border:none;cursor:pointer;padding:0;font-size:24px;color:var(--subtle);">×</button></div>' +
-    TaqdimTranslationChat.renderChatInterface(assigneeName) +
+    TaqdimTranslationChat.renderChatInterface(assigneeName, {
+      attachments: buildChatAttachments(app),
+      waiting: !app.assigned_to,
+    }) +
   '</div>';
   document.body.appendChild(overlay);
 
@@ -132,14 +153,18 @@ function renderApplication(token, app) {
     ? '<div class="util-row"><span class="util-row-title" style="color:var(--subtle);">' + escapeHtml(t('taqdim_translation_application.no_checklist', 'Your school has not set up a checklist for this yet.')) + '</span></div>'
     : items.map(item => renderChecklistItemHtml(item, editable)).join('');
 
+  // Once the request has been sent, the support chat is where this
+  // request lives - openable straight away, showing the waiting notice
+  // until an assistant is assigned (see taqdimChatRenderWaiting).
   let chatHtml = '';
-  if (app.all_required_completed && app.status !== 'draft') {
-    if (app.assigned_to && app.assignee) {
-      chatHtml = '<button type="button" id="openChatBtn" class="util-save-btn pill" style="margin-top:16px;width:100%;height:44px;font-size:13px;">' +
-        escapeHtml(t('taqdim_translation_application.support_chat_btn', 'Open Support Chat')) + '</button>';
-    } else {
-      chatHtml = '<div class="list-card-meta" style="margin-top:16px;text-align:center;">' + escapeHtml(t('taqdim_translation_application.waiting_for_reviewer', 'Your submission is complete. Waiting for a staff member to review it.')) + '</div>';
-    }
+  if (app.status !== 'draft') {
+    chatHtml = '<button type="button" id="openChatBtn" class="util-save-btn pill" style="margin-top:16px;width:100%;height:44px;font-size:13px;">' +
+      escapeHtml(t('taqdim_translation_application.support_chat_btn', 'Open Support Chat')) + '</button>' +
+      (app.assigned_to
+        ? ''
+        : '<div class="list-card-meta" style="margin-top:8px;text-align:center;">' +
+            escapeHtml(t('taqdim_translation_application.waiting_for_reviewer', 'Waiting for an assistant to be assigned — this can take some time.')) +
+          '</div>');
   }
 
   document.getElementById('appContent').innerHTML =
@@ -155,8 +180,17 @@ function renderApplication(token, app) {
     checklistHtml +
     chatHtml +
     renderHistoryHtml(app.statusHistory) +
+    // Send stays disabled until every required item is done - the
+    // backend rejects an incomplete submit with a 422 anyway
+    // (applicationSubmit), so this just surfaces that rule up front
+    // instead of letting the student hit an error.
     (editable
-      ? '<button type="button" class="util-save-btn pill" id="submitAppBtn" style="margin-top:20px;"><span id="submitAppLabel">' + escapeHtml(t('taqdim_translation_application.submit_btn', 'Submit')) + '</span></button>'
+      ? '<button type="button" class="util-save-btn pill" id="submitAppBtn" style="margin-top:20px;"' + (app.all_required_completed ? '' : ' disabled') + '><span id="submitAppLabel">' + escapeHtml(t('taqdim_translation_application.submit_btn', 'Send Request')) + '</span></button>' +
+        (app.all_required_completed
+          ? ''
+          : '<div class="list-card-meta" style="margin-top:8px;text-align:center;">' +
+              escapeHtml(t('taqdim_translation_application.submit_blocked_hint', 'Complete every required item above to send your request.')) +
+            '</div>')
       : '') +
     (!['approved', 'rejected', 'withdrawn'].includes(app.status)
       ? '<button type="button" class="sheet-btn-secondary" id="withdrawAppBtn" style="width:100%;margin-top:10px;">' + escapeHtml(t('taqdim_translation_application.withdraw_btn', 'Withdraw')) + '</button>'
@@ -166,6 +200,11 @@ function renderApplication(token, app) {
   wireChatButton(token, app);
   wireSubmitEvents(token);
   wireWithdrawButton(token);
+
+  if (openChatAfterRender) {
+    openChatAfterRender = false;
+    openChatModal(token, app);
+  }
 }
 
 function wireChatButton(token, app) {
@@ -183,11 +222,14 @@ function wireSubmitEvents(token) {
     const label = document.getElementById('submitAppLabel');
     submitBtn.disabled = true; label.innerHTML = '<span class="util-spinner"></span>';
     submitTaqdimTranslationApplication(token, currentApplication.id).then(() => {
-      showToast(t('taqdim_translation_application.submitted_toast', 'Submitted.'));
+      showToast(t('taqdim_translation_application.submitted_toast', 'Request sent.'));
+      // Land the student straight in the support chat, which opens in
+      // its waiting state until an assistant is assigned.
+      openChatAfterRender = true;
       loadApplication(token);
     }).catch(err => {
-      showToast(err && err.message ? err.message : t('taqdim_translation_application.submit_failed', 'Could not submit.'));
-      submitBtn.disabled = false; label.textContent = t('taqdim_translation_application.submit_btn', 'Submit');
+      showToast(err && err.message ? err.message : t('taqdim_translation_application.submit_failed', 'Could not send your request.'));
+      submitBtn.disabled = false; label.textContent = t('taqdim_translation_application.submit_btn', 'Send Request');
     });
   });
 }

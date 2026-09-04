@@ -201,18 +201,69 @@ function taqdimChatPoll() {
   }).catch(() => { /* silent - tries again next tick, same as chat-box.js */ });
 }
 
-function renderChatInterface(otherUserName) {
+// opts.attachments: [{ title, url }] - the requirement documents the
+// student already uploaded, pinned above the conversation so the
+// assigned admin sees everything that was submitted without leaving the
+// chat. Built from data each side already holds (the admin's
+// adminApplicationShow payload carries document_url per checklist item;
+// the student resolves their own vault), so it can't duplicate or drift
+// the way an auto-posted "here are my files" message would.
+// opts.waiting: true when nobody is assigned yet - there is no one to
+// open a thread with, so the conversation area shows the waiting notice
+// instead.
+function renderChatInterface(otherUserName, opts) {
+  opts = opts || {};
+  const attachments = opts.attachments || [];
+
+  const attachmentsHtml = attachments.length
+    ? '<div class="taqdim-chat-attachments">' +
+        '<div class="taqdim-chat-attachments-title">' + escapeHtml(t('taqdim_translation_chat.attachments_title', 'Submitted requirements')) + '</div>' +
+        attachments.map(a =>
+          '<div class="taqdim-chat-attachment-row">' +
+            icon(a.url ? 'filetext' : 'clipboard', { size: 14, color: '#1E40AF' }) +
+            '<span class="taqdim-chat-attachment-name">' + escapeHtml(a.title || '') + '</span>' +
+            (a.url
+              ? '<a href="' + escapeHtml(a.url) + '" target="_blank" rel="noopener" class="taqdim-chat-attachment-link">' + escapeHtml(t('taqdim_translation_chat.attachment_view', 'View')) + '</a>'
+              : '<span class="taqdim-chat-attachment-kind">' + escapeHtml(t('taqdim_translation_chat.attachment_text_answer', 'Written answer')) + '</span>') +
+          '</div>'
+        ).join('') +
+      '</div>'
+    : '';
+
   return (
     '<div class="taqdim-chat-container">' +
       '<div class="taqdim-chat-header">' +
         '<span style="font-weight:700;color:var(--ink);">' + escapeHtml(t('taqdim_translation_chat.title', 'Support Chat')) + '</span>' +
-        '<span style="font-size:12px;color:var(--subtle);">' + escapeHtml(otherUserName || '') + '</span>' +
+        '<span style="font-size:12px;color:var(--subtle);">' + escapeHtml(otherUserName || t('taqdim_translation_chat.not_assigned_yet', 'No assistant assigned yet')) + '</span>' +
       '</div>' +
       '<div class="taqdim-chat-lock-status" id="taqdimChatLockBar" style="display:none;"></div>' +
-      '<div class="taqdim-chat-messages" id="taqdimChatMessages"><div class="list-loading">' + escapeHtml(t('common.loading', 'Loading…')) + '</div></div>' +
+      attachmentsHtml +
+      '<div class="taqdim-chat-messages" id="taqdimChatMessages">' +
+        (opts.waiting ? '' : '<div class="list-loading">' + escapeHtml(t('common.loading', 'Loading…')) + '</div>') +
+      '</div>' +
       '<div class="taqdim-chat-input-area" id="taqdimChatInputArea"></div>' +
     '</div>'
   );
+}
+
+// Nobody assigned yet: message_thread_start needs a reciver_id, so there
+// is literally no thread to open until an admin picks the request up.
+// Show what the student is waiting on instead of an empty conversation.
+function taqdimChatRenderWaiting() {
+  const wrap = document.getElementById('taqdimChatMessages');
+  if (wrap) {
+    wrap.innerHTML =
+      '<div class="taqdim-chat-waiting">' +
+        icon('clock', { size: 24, color: 'var(--subtle)' }) +
+        '<div class="taqdim-chat-waiting-title">' + escapeHtml(t('taqdim_translation_chat.waiting_title', 'Request sent')) + '</div>' +
+        '<div class="taqdim-chat-waiting-note">' + escapeHtml(t('taqdim_translation_chat.waiting_note', 'Your documents have been sent to the team. An assistant will be assigned to you shortly — this can take some time. Once someone is assigned you can chat with them here.')) + '</div>' +
+      '</div>';
+  }
+  const area = document.getElementById('taqdimChatInputArea');
+  if (area) {
+    area.innerHTML = '<div class="taqdim-chat-input-locked">' +
+      escapeHtml(t('taqdim_translation_chat.waiting_input', 'You can send messages once an assistant is assigned.')) + '</div>';
+  }
 }
 
 function initializeTaqdimChat(token, otherUserId, otherUserName, isAdmin) {
@@ -228,6 +279,11 @@ function initializeTaqdimChat(token, otherUserId, otherUserName, isAdmin) {
     lastId: undefined,
     pollId: null,
   };
+
+  if (!otherUserId) {
+    taqdimChatRenderWaiting();
+    return;
+  }
 
   startMessageThread(token, otherUserId).then(threadId => {
     taqdimChatState.threadId = threadId;

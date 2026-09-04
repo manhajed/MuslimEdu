@@ -187,9 +187,9 @@ function closeApplicationDetail() {
   TaqdimTranslationChat.closeTaqdimChat();
 }
 function loadApplicationDetail(token, applicationId) {
-  fetchAdminTaqdimTranslationApplication(token, applicationId).then(app => {
+  return fetchAdminTaqdimTranslationApplication(token, applicationId).then(app => {
     const panel = document.getElementById('adPanel');
-    if (!panel) return;
+    if (!panel) return null;
     panel.innerHTML = '<div class="sheet-handle"></div>' + renderDetailContent(token, app);
     document.getElementById('adCloseBtn').addEventListener('click', closeApplicationDetail);
     document.getElementById('adAssignBtn').addEventListener('click', () => openAssignSheet(token, app));
@@ -201,13 +201,29 @@ function loadApplicationDetail(token, applicationId) {
         if (item) openChecklistItemReviewSheet(token, app, item);
       });
     });
+    return app;
   }).catch(() => {
     const panel = document.getElementById('adPanel');
     if (panel) panel.innerHTML = '<div class="sheet-handle"></div><div class="list-error">' + escapeHtml(t('taqdim_translation_applications.detail_load_failed', 'Could not load this application.')) + '</div>';
+    return null;
   });
 }
 
 // ── Support chat modal (admin side - can send files, lock, share credentials) ──
+// adminApplicationShow already returns document_url per checklist item,
+// so everything the student uploaded is pinned above the conversation -
+// the admin sees the submitted requirements without leaving the chat.
+function buildChatAttachments(app) {
+  return (app.checklistItems || [])
+    .filter(it => it.is_completed)
+    .slice()
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+    .map(it => ({
+      title: it.title,
+      url: it.requirement_type === 'document' ? (it.document_url || null) : null,
+    }));
+}
+
 function openChatModal(token, app) {
   const studentId = app.student && app.student.id;
   const studentName = (app.student && app.student.name) || t('taqdim_translation_applications.unknown_student', 'Unknown student');
@@ -217,7 +233,7 @@ function openChatModal(token, app) {
   overlay.className = 'taqdim-chat-overlay';
   overlay.innerHTML = '<div class="taqdim-chat-modal">' +
     '<div class="taqdim-chat-close"><button type="button" id="closeChatBtn" style="background:none;border:none;cursor:pointer;padding:0;font-size:24px;color:var(--subtle);">×</button></div>' +
-    TaqdimTranslationChat.renderChatInterface(studentName) +
+    TaqdimTranslationChat.renderChatInterface(studentName, { attachments: buildChatAttachments(app) }) +
   '</div>';
   document.body.appendChild(overlay);
 
@@ -299,8 +315,13 @@ function openAssignSheet(token, app) {
 function doAssign(token, app, staffId) {
   assignTaqdimTranslationApplication(token, app.id, staffId).then(() => {
     showToast(t('taqdim_translation_applications.assigned_toast', 'Assignment updated.'));
-    loadApplicationDetail(token, app.id);
     reload(token);
+    return loadApplicationDetail(token, app.id);
+  }).then(fresh => {
+    // Taking the request on connects the admin to the student straight
+    // away - that's the point of assigning. Unassigning (staffId null)
+    // just refreshes the sheet.
+    if (staffId && fresh) openChatModal(token, fresh);
   }).catch(err => showToast(err && err.message ? err.message : t('taqdim_translation_applications.assign_failed', 'Could not update assignment.')));
 }
 
