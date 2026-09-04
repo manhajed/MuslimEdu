@@ -578,7 +578,7 @@
     <div class="panel success-panel" id="panelSuccess" style="display:none;">
       <div class="success-icon" id="successIcon"></div>
       <h2 data-i18n="register.app_submitted_title">Application submitted</h2>
-      <p data-i18n="register.app_submitted_body">Your school and admin account are pending review. You'll be able to sign in once MuslimEdu staff approve your application - this is usually quick, but can take a little while.</p>
+      <p data-i18n="register.app_submitted_body">Your school and admin account have been created and are pending review. You can sign in right away to check your application status - this is usually quick, but can take a little while.</p>
       <a class="gradient-btn" href="login.php" style="text-decoration:none;" data-i18n="register.go_to_login">Go to Login</a>
     </div>
 

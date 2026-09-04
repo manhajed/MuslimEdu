@@ -2977,6 +2977,31 @@ function guardDashboard(expectedRole, onReady, _isRetry) {
         return;
       }
 
+      // Self-registration gate (School::REGISTRATION_STATUSES) - a school
+      // admin created by "Register Your School" can sign in immediately
+      // (SchoolRegistrationApiController::submit()), but sees only
+      // registration-pending.php until a SuperAdmin approves it, so they
+      // always have a way to check their status instead of no account at
+      // all. Every pre-existing school defaults to 'approved' server-side,
+      // so this is a no-op for every admin who didn't come through that
+      // flow. Checked here (not per-page) for the same reason the
+      // student/admin gates below are - every admin-*.php page routes
+      // through guardDashboard(). registration-pending.php itself is
+      // exempt from the redirect (so its own onReady runs and can decide
+      // what to show) and from runAdminSetupGate below (a school this new
+      // never has academic_setup_completed yet, which would otherwise show
+      // the setup wizard instead of the pending/rejected screen on the one
+      // page meant to show it).
+      if (user.role === 'admin' && currentPageFilename() === 'registration-pending.php') {
+        document.getElementById('routeGuardSplash')?.remove();
+        onReady(user, token);
+        return;
+      }
+      if (user.role === 'admin' && user.school_registration_status && user.school_registration_status !== 'approved') {
+        window.location.href = 'registration-pending.php';
+        return;
+      }
+
       // Every student-*.php page routes through here, so this is the one
       // place a still-enrolling student's access needs blocking - not
       // duplicated per page. isOrphanSchoolUser: orphan schools have no
