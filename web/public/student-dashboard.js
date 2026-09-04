@@ -25,7 +25,11 @@
     pink: '#FF3B72', red: '#FF453A', purple: '#BF5AF2', gray: '#8E8E93', gold: '#D4A64A',
   };
 
-  function buildSections(isOrphan) {
+  function buildSections(isOrphan, user) {
+    const features = (user && user.school_features) || {};
+    const hasTaqdim = features.taqdim === true;
+    const hasTranslation = features.translation === true;
+
     if (isOrphan) {
       return [
         { label: t('student_dashboard.group_reports', 'Reports'), items: [
@@ -48,6 +52,28 @@
         ]},
       ];
     }
+
+    const supportItems = [
+      { title: t('student_dashboard.services_title', 'Services'), desc: t('student_dashboard.services_desc', 'Guidance, counselling and other requests'), icon: 'clipboard', tint: TINT.pink, href: 'student-services.php' },
+    ];
+
+    // Add Taqdim and Translation if school has these features enabled
+    if (hasTaqdim) {
+      supportItems.push({ title: t('student_dashboard.taqdim_title', 'Taqdim Assistant'), desc: t('student_dashboard.taqdim_desc', 'Track your Taqdim applications and progress'), icon: 'star', tint: TINT.indigo, href: 'taqdim-dashboard.php' });
+    }
+    if (hasTranslation) {
+      supportItems.push({ title: t('student_dashboard.translation_title', 'Translation Service'), desc: t('student_dashboard.translation_desc', 'Access translation and document services'), icon: 'globe', tint: TINT.teal, href: 'translation-dashboard.php' });
+    }
+
+    supportItems.push(
+      // Platform-wide, not tied to a class-based academic record - see
+      // ScholarshipApplicationController's own header comment - so this
+      // sits in Support for both orphan and non-orphan students rather
+      // than gated behind My Learning.
+      { title: t('student_dashboard.scholarships_title', 'Scholarships'), desc: t('student_dashboard.scholarships_desc', 'Browse scholarships and manage your applications'), icon: 'gradcap', tint: TINT.gold, href: 'scholarship-browse.php' },
+      { title: t('student_dashboard.scholarship_documents_title', 'Scholarship Documents'), desc: t('student_dashboard.scholarship_documents_desc', 'Documents you have uploaded for scholarship applications'), icon: 'filetext', tint: TINT.teal, href: 'scholarship-documents.php' },
+    );
+
     return [
       { label: 'My Learning', items: [
         { title: t('student_dashboard.my_progress_title', 'My Progress'), desc: t('student_dashboard.my_progress_desc', 'Track your learning progress'), icon: 'layers', tint: TINT.purple, href: 'student-progress.php' },
@@ -60,15 +86,7 @@
         { title: t('student_dashboard.documents_title', 'Documents'), desc: t('student_dashboard.documents_desc', 'Request report cards, COR and certificates'), icon: 'document', tint: TINT.orange, href: 'student-documents.php' },
         { title: t('student_dashboard.upload_documents_title', 'Upload Documents'), desc: 'Submit your ID, medical records and other files', icon: 'document', tint: TINT.teal, href: 'student-upload-documents.php' },
       ]},
-      { label: 'Support', items: [
-        { title: t('student_dashboard.services_title', 'Services'), desc: t('student_dashboard.services_desc', 'Guidance, counselling and other requests'), icon: 'clipboard', tint: TINT.pink, href: 'student-services.php' },
-        // Platform-wide, not tied to a class-based academic record - see
-        // ScholarshipApplicationController's own header comment - so this
-        // sits in Support for both orphan and non-orphan students rather
-        // than gated behind My Learning.
-        { title: t('student_dashboard.scholarships_title', 'Scholarships'), desc: t('student_dashboard.scholarships_desc', 'Browse scholarships and manage your Taqdim applications'), icon: 'gradcap', tint: TINT.gold, href: 'scholarship-browse.php' },
-        { title: t('student_dashboard.scholarship_documents_title', 'Scholarship Documents'), desc: t('student_dashboard.scholarship_documents_desc', 'Documents you have uploaded for scholarship applications'), icon: 'filetext', tint: TINT.teal, href: 'scholarship-documents.php' },
-      ]},
+      { label: 'Support', items: supportItems },
       { label: t('alumni_dashboard.section_label', 'Account'), items: [
         { title: t('student_dashboard.notifications_title', 'Notifications'), desc: t('student_dashboard.notifications_desc', 'Stay updated with important alerts'), icon: 'bell', tint: TINT.blue, href: 'notifications.php' },
         { title: t('student_dashboard.settings_title', 'Settings'), desc: t('student_dashboard.settings_desc', 'Language, theme, privacy and password'), icon: 'gear', tint: TINT.gray, href: 'account-settings.php' },
@@ -79,7 +97,7 @@
   let lastStudentUser = null;
   function renderSections() {
     const isOrphan = isOrphanSchoolUser(lastStudentUser);
-    document.getElementById('groupsWrap').innerHTML = buildSections(isOrphan).map(s => renderGroupSection(s.label, s.items)).join('');
+    document.getElementById('groupsWrap').innerHTML = buildSections(isOrphan, lastStudentUser).map(s => renderGroupSection(s.label, s.items)).join('');
     document.getElementById('groupsWrap').insertAdjacentHTML('beforeend', renderLogoutFooter());
   }
   onLocaleChange(() => { if (lastStudentUser) renderSections(); });
