@@ -21,8 +21,8 @@
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
 <link rel="stylesheet" href="assets/fonts.css" />
 <link rel="stylesheet" href="dashboard.css" />
-<link rel="stylesheet" href="taqdim-translation-chat.css?v=4" />
-<link rel="stylesheet" href="taqdim-translation-wizard.css?v=4" />
+<link rel="stylesheet" href="taqdim-translation-chat.css?v=5" />
+<link rel="stylesheet" href="taqdim-translation-wizard.css?v=5" />
 </head>
 <body>
 
@@ -37,8 +37,8 @@
 <div id="bottomNavWrap"></div>
 
 <script src="dashboard.js"></script>
-<script src="taqdim-translation-chat.js?v=4"></script>
-<script src="taqdim-translation-application.js?v=4"></script>
+<script src="taqdim-translation-chat.js?v=5"></script>
+<script src="taqdim-translation-application.js?v=5"></script>
 <script src="pwa.js" defer></script>
 </body>
 </html>

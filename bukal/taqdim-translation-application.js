@@ -256,8 +256,7 @@ function renderApplication(token, app) {
 
   document.getElementById('appContent').innerHTML =
     '<div style="padding:2px;">' +
-      '<h1 style="font-size:18px;font-weight:800;color:var(--ink);margin:0 0 4px;">' + escapeHtml(featureTitle()) + '</h1>' +
-      '<div class="chip-row" style="margin-top:6px;">' +
+      '<div class="chip-row">' +
         '<span class="mini-chip ' + appStatusChipClass(app.status) + '">' + escapeHtml(appStatusLabel(app.status)) + '</span>' +
         '<span class="mini-chip ok">' + escapeHtml(app.reference_no || '') + '</span>' +
       '</div>' +
