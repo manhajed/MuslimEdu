@@ -1,63 +1,74 @@
-/* Taqdim/Translation checklist wizard - one admin-configured requirement
-   per step, with a tap-to-upload dropzone that uploads on selection. */
+/* Taqdim/Translation checklist wizard.
+   Matches the school registration form's design language (see
+   src/screens/SchoolRegistrationScreen.tsx + src/theme/glass.ts):
+   segmented progress track, large 26px step title over a subtle caption,
+   dashed upload cards, filled borderless inputs, emerald as the single
+   accent. Tokens are inlined as literals because this page's own CSS
+   variables are not guaranteed to be in scope for everything here. */
 
 .tt-wizard {
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
+/* Segmented progress — one bar per requirement, filled as they complete */
 .tt-wizard-progress {
-  height: 6px;
-  border-radius: 3px;
-  background: #E5E7EB;
-  overflow: hidden;
-}
-
-.tt-wizard-progress-bar {
-  height: 100%;
-  border-radius: 3px;
-  background: var(--emerald-deep, #1A7A6E);
-  transition: width 0.25s ease;
-}
-
-.tt-wizard-meta {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
   gap: 8px;
-  margin: 8px 2px 12px;
-  font-size: 12px;
-  color: var(--subtle, #6B7280);
+  margin-bottom: 18px;
 }
 
-.tt-wizard-step-count {
-  font-weight: 700;
-  color: var(--ink, #111827);
+.tt-wizard-seg {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: #E5E7EB;
+  transition: background 0.2s ease;
 }
 
-.tt-wizard-card {
-  background: var(--background, #ffffff);
-  border: 1px solid var(--border, #E5E7EB);
-  border-radius: 14px;
-  padding: 16px;
+.tt-wizard-seg.is-done {
+  background: #1FAE64;
 }
 
-.tt-wizard-badges {
-  margin-bottom: 8px;
+.tt-wizard-seg.is-current {
+  background: #0F7A3D;
+}
+
+.tt-wizard-caption {
+  font-size: 14px;
+  color: #6B7280;
+  margin-bottom: 6px;
+}
+
+.tt-wizard-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: #111827;
+  line-height: 1.2;
+  letter-spacing: -0.3px;
+}
+
+.tt-wizard-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13.5px;
+  color: #6B7280;
 }
 
 .tt-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 9px;
+  padding: 4px 11px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 
 .tt-badge-done {
-  background: #D1FAE5;
-  color: #065F46;
+  background: rgba(31, 174, 100, 0.12);
+  color: #0F7A3D;
 }
 
 .tt-badge-required {
@@ -66,45 +77,105 @@
 }
 
 .tt-badge-optional {
-  background: #FEF3C7;
-  color: #92400E;
-}
-
-.tt-wizard-title {
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--ink, #111827);
-  line-height: 1.25;
-}
-
-.tt-wizard-type {
-  font-size: 12px;
-  color: var(--subtle, #6B7280);
-  margin-top: 3px;
+  background: #EEF1EF;
+  color: #6B7280;
 }
 
 .tt-wizard-note {
-  margin-top: 10px;
-  padding: 9px 11px;
-  border-radius: 10px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
   background: #FEF2F2;
-  border-left: 3px solid #EF4444;
   color: #991B1B;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
 }
 
-/* Uploaded-file row */
+/* Dashed upload card — the register form's document-capture card */
+.tt-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-top: 18px;
+  padding: 16px;
+  min-height: 160px;
+  box-sizing: border-box;
+  border: 1.5px dashed #E5E7EB;
+  border-radius: 28px;
+  background: #FFFFFF;
+  cursor: pointer;
+  text-align: center;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.tt-dropzone:active {
+  border-color: #1FAE64;
+  background: #F7FAF8;
+}
+
+.tt-dropzone-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 26px;
+  background: rgba(31, 174, 100, 0.12);
+  color: #0F7A3D;
+}
+
+.tt-dropzone-icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.tt-dropzone-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #111827;
+  margin-top: 10px;
+}
+
+.tt-dropzone-hint {
+  font-size: 12px;
+  color: #6B7280;
+  margin-top: 4px;
+}
+
+.tt-dropzone.is-uploading {
+  border-style: solid;
+  border-color: #1FAE64;
+  background: #F7FAF8;
+  cursor: default;
+}
+
+/* Uploaded file row */
 .tt-file-chip {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 14px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #EFF6FF;
-  border: 1px solid #BFDBFE;
-  font-size: 13px;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  font-size: 13.5px;
+}
+
+.tt-file-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 13px;
+  background: rgba(31, 174, 100, 0.12);
+  flex-shrink: 0;
 }
 
 .tt-file-name {
@@ -113,13 +184,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--ink, #111827);
+  color: #111827;
   font-weight: 600;
 }
 
 .tt-file-view {
   flex-shrink: 0;
-  color: #1D4ED8;
+  color: #0F7A3D;
   font-weight: 700;
   text-decoration: none;
 }
@@ -128,130 +199,93 @@
   text-decoration: underline;
 }
 
-/* Modern replacement for the native file input */
-.tt-dropzone {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin-top: 14px;
-  padding: 26px 16px;
-  border: 2px dashed #CBD5E1;
-  border-radius: 14px;
-  background: #F8FAFC;
-  cursor: pointer;
-  text-align: center;
-  -webkit-tap-highlight-color: transparent;
-  transition: border-color 0.15s ease, background 0.15s ease;
-}
-
-.tt-dropzone:active {
-  border-color: var(--emerald-deep, #1A7A6E);
-  background: #F0FDF4;
-}
-
-.tt-dropzone-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: #E6F4F1;
-  color: var(--emerald-deep, #1A7A6E);
-}
-
-.tt-dropzone-icon svg {
-  width: 20px;
-  height: 20px;
-  display: block;
-}
-
-.tt-dropzone-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--ink, #111827);
-}
-
-.tt-dropzone-hint {
-  font-size: 12px;
-  color: var(--subtle, #6B7280);
-}
-
-.tt-dropzone.is-uploading {
-  border-style: solid;
-  border-color: var(--emerald-deep, #1A7A6E);
-  background: #F0FDF4;
-  cursor: default;
-}
-
+/* Filled, borderless input — the register form's pill.input */
 .tt-wizard-textarea {
   width: 100%;
   box-sizing: border-box;
-  margin-top: 14px;
-  padding: 12px;
-  min-height: 120px;
-  border: 1px solid var(--border, #E5E7EB);
-  border-radius: 12px;
+  margin-top: 18px;
+  padding: 14px 18px;
+  min-height: 96px;
+  border: none;
+  border-radius: 14px;
+  background: #EEF1EF;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.45;
-  color: var(--ink, #111827);
-  background: var(--background, #ffffff);
+  color: #111827;
   resize: vertical;
 }
 
 .tt-wizard-textarea:focus {
   outline: none;
-  border-color: var(--emerald-deep, #1A7A6E);
-  box-shadow: 0 0 0 3px rgba(26, 122, 110, 0.12);
+  box-shadow: 0 0 0 2px rgba(31, 174, 100, 0.35);
 }
 
-/* Step navigation */
+.tt-wizard-save {
+  margin-top: 12px;
+  width: 100%;
+  height: 46px;
+  border: none;
+  border-radius: 999px;
+  background: #EEF1EF;
+  color: #111827;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tt-wizard-save:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Footer action row */
 .tt-wizard-nav {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid #E5E7EB;
 }
 
 .tt-wizard-back {
   flex-shrink: 0;
-  height: 46px;
-  padding: 0 18px;
-  border-radius: 999px;
-  border: 1px solid var(--border, #E5E7EB);
-  background: var(--background, #ffffff);
-  color: var(--ink, #111827);
+  height: 52px;
+  padding: 0 22px;
+  border-radius: 16px;
+  border: 1px solid #E5E7EB;
+  background: #FFFFFF;
+  color: #111827;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   cursor: pointer;
 }
 
 .tt-wizard-next {
   flex: 1;
-  height: 46px;
+  height: 52px;
   border: none;
-  border-radius: 999px;
-  background: var(--emerald-deep, #1A7A6E);
-  color: #ffffff;
+  border-radius: 16px;
+  background: linear-gradient(90deg, #4CAF50 0%, #0F7A3D 100%);
+  color: #FFFFFF;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   cursor: pointer;
 }
 
 .tt-wizard-next:disabled {
-  background: #CBD5E1;
-  color: #ffffff;
+  background: #E5E7EB;
+  color: #9CA3AF;
   cursor: default;
 }
 
 .tt-wizard-hint {
-  margin-top: 8px;
+  margin-top: 10px;
   text-align: center;
-  font-size: 12px;
-  color: var(--subtle, #6B7280);
+  font-size: 12.5px;
+  color: #6B7280;
 }

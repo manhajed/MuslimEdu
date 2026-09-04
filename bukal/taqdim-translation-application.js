@@ -107,9 +107,9 @@ function renderChecklistItemHtml(item) {
 // picked, and Continue moves to the next requirement the admin configured.
 const TT_UPLOAD_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>';
 
-function renderWizardItemCard(item) {
+function renderWizardItemCard(item, total) {
   const badge = item.is_completed
-    ? '<span class="tt-badge tt-badge-done">' + icon('checkcircle', { size: 12, color: '#065F46' }) + escapeHtml(t('taqdim_translation_application.completed_chip', 'Completed')) + '</span>'
+    ? '<span class="tt-badge tt-badge-done">' + icon('checkcircle', { size: 12, color: '#0F7A3D' }) + escapeHtml(t('taqdim_translation_application.completed_chip', 'Completed')) + '</span>'
     : (item.is_required
       ? '<span class="tt-badge tt-badge-required">' + escapeHtml(t('taqdim_translation_application.required_chip', 'Required')) + '</span>'
       : '<span class="tt-badge tt-badge-optional">' + escapeHtml(t('taqdim_translation_application.optional_chip', 'Optional')) + '</span>');
@@ -119,9 +119,10 @@ function renderWizardItemCard(item) {
     const doc = item.document_id ? myDocumentsById[item.document_id] : null;
     bodyHtml =
       (doc
-        ? '<div class="tt-file-chip">' + icon('filetext', { size: 16, color: '#1D4ED8' }) +
+        ? '<div class="tt-file-chip">' +
+            '<span class="tt-file-check">' + icon('checkcircle', { size: 15, color: '#0F7A3D' }) + '</span>' +
             '<span class="tt-file-name">' + escapeHtml(doc.title || t('taqdim_translation_application.file_attached', 'File attached')) + '</span>' +
-            '<a class="tt-file-view" href="' + escapeHtml(doc.file) + '" target="_blank" rel="noopener">' + escapeHtml(t('taqdim_translation_application.view_link', 'View')) + '</a>' +
+            (doc.file ? '<a class="tt-file-view" href="' + escapeHtml(doc.file) + '" target="_blank" rel="noopener">' + escapeHtml(t('taqdim_translation_application.view_link', 'View')) + '</a>' : '') +
           '</div>'
         : '') +
       '<label class="tt-dropzone" data-item-id="' + item.id + '">' +
@@ -135,35 +136,31 @@ function renderWizardItemCard(item) {
   } else { // statement
     bodyHtml =
       '<textarea class="tt-wizard-textarea itemStatementInput" data-item-id="' + item.id + '" placeholder="' + escapeHtml(t('taqdim_translation_application.statement_placeholder', 'Write your answer here')) + '">' + escapeHtml(item.statement_text || '') + '</textarea>' +
-      '<button type="button" class="util-save-btn pill itemSaveStatementBtn" data-item-id="' + item.id + '" style="margin-top:10px;height:42px;font-size:13px;"><span class="itemSaveStatementLabel">' + escapeHtml(t('common.save', 'Save')) + '</span></button>';
+      '<button type="button" class="tt-wizard-save itemSaveStatementBtn" data-item-id="' + item.id + '"><span class="itemSaveStatementLabel">' + escapeHtml(t('common.save', 'Save')) + '</span></button>';
   }
 
   return (
-    '<div class="tt-wizard-card">' +
-      '<div class="tt-wizard-badges">' + badge + '</div>' +
-      '<div class="tt-wizard-title">' + escapeHtml(item.title) + '</div>' +
-      '<div class="tt-wizard-type">' + escapeHtml(requirementTypeLabel(item.requirement_type)) + '</div>' +
-      (item.notes ? '<div class="tt-wizard-note">' + escapeHtml(t('taqdim_translation_application.revision_note_prefix', 'Staff note:')) + ' ' + escapeHtml(item.notes) + '</div>' : '') +
-      bodyHtml +
-    '</div>'
+    '<div class="tt-wizard-caption">' + escapeHtml(t('taqdim_translation_application.wizard_step', 'Step {n} of {total}').replace('{n}', String(wizardStep + 1)).replace('{total}', String(total))) + '</div>' +
+    '<div class="tt-wizard-title">' + escapeHtml(item.title) + '</div>' +
+    '<div class="tt-wizard-sub">' + badge + '<span>' + escapeHtml(requirementTypeLabel(item.requirement_type)) + '</span></div>' +
+    (item.notes ? '<div class="tt-wizard-note">' + escapeHtml(t('taqdim_translation_application.revision_note_prefix', 'Staff note:')) + ' ' + escapeHtml(item.notes) + '</div>' : '') +
+    bodyHtml
   );
 }
 
 function renderWizardHtml(items) {
-  const total = items.length;
   const item = items[wizardStep];
-  const doneCount = items.filter(it => it.is_completed).length;
-  const isLast = wizardStep === total - 1;
+  const isLast = wizardStep === items.length - 1;
   const blocked = item.is_required && !item.is_completed;
+
+  const segments = items.map((it, i) =>
+    '<span class="tt-wizard-seg' + (it.is_completed ? ' is-done' : (i === wizardStep ? ' is-current' : '')) + '"></span>'
+  ).join('');
 
   return (
     '<div class="tt-wizard">' +
-      '<div class="tt-wizard-progress"><div class="tt-wizard-progress-bar" style="width:' + Math.round((doneCount / total) * 100) + '%;"></div></div>' +
-      '<div class="tt-wizard-meta">' +
-        '<span class="tt-wizard-step-count">' + escapeHtml(t('taqdim_translation_application.wizard_step', 'Step {n} of {total}').replace('{n}', String(wizardStep + 1)).replace('{total}', String(total))) + '</span>' +
-        '<span>' + escapeHtml(t('taqdim_translation_application.wizard_done', '{done} of {total} done').replace('{done}', String(doneCount)).replace('{total}', String(total))) + '</span>' +
-      '</div>' +
-      renderWizardItemCard(item) +
+      '<div class="tt-wizard-progress">' + segments + '</div>' +
+      renderWizardItemCard(item, items.length) +
       '<div class="tt-wizard-nav">' +
         (wizardStep > 0 ? '<button type="button" class="tt-wizard-back" id="wizardBackBtn">' + escapeHtml(t('taqdim_translation_application.wizard_back', 'Back')) + '</button>' : '') +
         (isLast ? '' : '<button type="button" class="tt-wizard-next" id="wizardNextBtn"' + (blocked ? ' disabled' : '') + '>' + escapeHtml(t('taqdim_translation_application.wizard_continue', 'Continue')) + '</button>') +
@@ -341,10 +338,19 @@ function wireWithdrawButton(token) {
 
 function TaqdimTranslationApplicationOpenStatuses() { return ['draft', 'under_review']; }
 
+// Applies a saved checklist item to the copy already in memory so the
+// step can re-render from local state - no second round-trip refetching
+// the whole application just to show what we already know changed.
+function patchLocalItem(itemId, changes) {
+  const item = (currentApplication.checklistItems || []).find(it => String(it.id) === String(itemId));
+  if (item) Object.assign(item, changes);
+  currentApplication.all_required_completed =
+    (currentApplication.checklistItems || []).every(it => !it.is_required || it.is_completed);
+}
+
 function wireChecklistEvents(token) {
-  // No separate Upload button: picking a file starts the upload. The
-  // dropzone is swapped for a progress state, and either outcome ends in
-  // a reload, which rebuilds it either way.
+  // No separate Upload button: picking a file uploads it straight away,
+  // and the step updates in place from the response.
   document.querySelectorAll('.itemFileInput').forEach(input => {
     input.addEventListener('change', () => {
       const file = input.files && input.files[0];
@@ -358,14 +364,18 @@ function wireChecklistEvents(token) {
           '<span class="tt-dropzone-title">' + escapeHtml(t('taqdim_translation_application.uploading', 'Uploading…')) + '</span>' +
           '<span class="tt-dropzone-hint">' + escapeHtml(file.name) + '</span>';
       }
-      uploadTaqdimTranslationDocument(token, APP_FEATURE, file).then(doc =>
-        updateTaqdimTranslationChecklistItem(token, itemId, { document_id: doc.id, is_completed: true })
-      ).then(() => {
+      let uploaded = null;
+      uploadTaqdimTranslationDocument(token, APP_FEATURE, file).then(doc => {
+        uploaded = doc;
+        return updateTaqdimTranslationChecklistItem(token, itemId, { document_id: doc.id, is_completed: true });
+      }).then(() => {
+        myDocumentsById[uploaded.id] = uploaded;
+        patchLocalItem(itemId, { document_id: uploaded.id, is_completed: true });
         showToast(t('taqdim_translation_application.uploaded_toast', 'File uploaded.'));
-        loadApplication(token);
+        renderApplication(token, currentApplication);
       }).catch(err => {
         showToast(err && err.message ? err.message : t('taqdim_translation_application.upload_failed', 'Could not upload this file.'));
-        loadApplication(token);
+        renderApplication(token, currentApplication);
       });
     });
   });
@@ -388,8 +398,9 @@ function wireChecklistEvents(token) {
       const label = btn.querySelector('.itemSaveStatementLabel');
       btn.disabled = true; label.innerHTML = '<span class="util-spinner"></span>';
       updateTaqdimTranslationChecklistItem(token, itemId, { statement_text: text, is_completed: text.length > 0 }).then(() => {
+        patchLocalItem(itemId, { statement_text: text, is_completed: text.length > 0 });
         showToast(t('taqdim_translation_application.statement_saved_toast', 'Saved.'));
-        loadApplication(token);
+        renderApplication(token, currentApplication);
       }).catch(err => {
         showToast(err && err.message ? err.message : t('taqdim_translation_application.statement_save_failed', 'Could not save.'));
         btn.disabled = false; label.textContent = t('common.save', 'Save');
