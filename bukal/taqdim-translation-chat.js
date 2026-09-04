@@ -23,6 +23,7 @@
 // in ChatController - out of scope for this pass.
 
 const TAQDIM_CHAT_POLL_MS = 3000;
+const TAQDIM_CHAT_POLL_MAX_MS = 60000;
 const TAQDIM_CHAT_MAX_MESSAGE_LENGTH = 4000;
 
 let taqdimChatState = {
@@ -35,6 +36,7 @@ let taqdimChatState = {
   messages: [],
   lastId: undefined,
   pollId: null,
+  pollDelay: TAQDIM_CHAT_POLL_MS,
 };
 
 function taqdimChatFormatTime(iso) {
@@ -216,9 +218,29 @@ function taqdimChatSend() {
   });
 }
 
+function taqdimChatStopPolling() {
+  if (taqdimChatState.pollId) clearTimeout(taqdimChatState.pollId);
+  taqdimChatState.pollId = null;
+}
+
+function taqdimChatSchedulePoll(delay) {
+  taqdimChatStopPolling();
+  taqdimChatState.pollId = setTimeout(taqdimChatPoll, delay);
+}
+
+// Self-scheduling rather than setInterval so the delay can grow: a chat
+// left open in a background tab used to poll every 3s forever, and on a
+// failure it retried at that same rate - which is how a transient 429
+// turns into a lasting rate-limit lockout that breaks unrelated requests
+// (opening a document, signing in) from the same device.
 function taqdimChatPoll() {
+  taqdimChatState.pollId = null;
   if (!taqdimChatState.token || !taqdimChatState.threadId) return;
+  // Nothing on screen to update - don't spend a request on a hidden tab.
+  if (document.hidden) { taqdimChatSchedulePoll(taqdimChatState.pollDelay); return; }
+
   fetchChatMessages(taqdimChatState.token, taqdimChatState.threadId, taqdimChatState.lastId).then(newOnes => {
+    taqdimChatState.pollDelay = TAQDIM_CHAT_POLL_MS;
     if (newOnes && newOnes.length) {
       taqdimChatState.lastId = newOnes[newOnes.length - 1].id;
       taqdimChatState.messages = taqdimChatState.messages.concat(newOnes);
@@ -230,7 +252,11 @@ function taqdimChatPoll() {
       taqdimChatRenderLockBar();
       if (lockChanged) taqdimChatRenderInputArea();
     }
-  }).catch(() => { /* silent - tries again next tick, same as chat-box.js */ });
+    taqdimChatSchedulePoll(taqdimChatState.pollDelay);
+  }).catch(() => {
+    taqdimChatState.pollDelay = Math.min(taqdimChatState.pollDelay * 2, TAQDIM_CHAT_POLL_MAX_MS);
+    taqdimChatSchedulePoll(taqdimChatState.pollDelay);
+  });
 }
 
 // opts.attachments: [{ title, url }] - the requirement documents the
@@ -299,6 +325,10 @@ function taqdimChatRenderWaiting() {
 }
 
 function initializeTaqdimChat(token, otherUserId, otherUserName, isAdmin) {
+  // Re-opening the chat must not strand the previous timer: replacing
+  // taqdimChatState would drop the handle while the timer kept firing,
+  // so every re-open added another poller hitting the server.
+  taqdimChatStopPolling();
   taqdimChatState = {
     token,
     threadId: null,
@@ -310,6 +340,7 @@ function initializeTaqdimChat(token, otherUserId, otherUserName, isAdmin) {
     messages: [],
     lastId: undefined,
     pollId: null,
+    pollDelay: TAQDIM_CHAT_POLL_MS,
   };
 
   if (!otherUserId) {
@@ -329,7 +360,7 @@ function initializeTaqdimChat(token, otherUserId, otherUserName, isAdmin) {
     taqdimChatRenderMessages();
     taqdimChatRenderLockBar();
     taqdimChatRenderInputArea();
-    taqdimChatState.pollId = setInterval(taqdimChatPoll, TAQDIM_CHAT_POLL_MS);
+    taqdimChatSchedulePoll(TAQDIM_CHAT_POLL_MS);
   }).catch(err => {
     const wrap = document.getElementById('taqdimChatMessages');
     if (wrap) wrap.innerHTML = '<div class="list-error">' + escapeHtml((err && err.message) || t('taqdim_translation_chat.load_failed', 'Could not load chat.')) + '</div>';
@@ -337,10 +368,11 @@ function initializeTaqdimChat(token, otherUserId, otherUserName, isAdmin) {
 }
 
 function closeTaqdimChat() {
-  if (taqdimChatState.pollId) { clearInterval(taqdimChatState.pollId); }
+  taqdimChatStopPolling();
   taqdimChatState = {
     threadId: null, otherUserId: null, otherUserName: null, isAdmin: false,
     isLocked: false, lockedNote: null, messages: [], lastId: undefined, pollId: null,
+    pollDelay: TAQDIM_CHAT_POLL_MS,
   };
 }
 
