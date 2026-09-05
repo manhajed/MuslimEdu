@@ -49,3 +49,41 @@ superadmin app (`src/screens/superadmin/SubscriptionPackagesScreen.tsx`),
 which offers just the three legacy keys — there is no package editor on
 the web at all. Until one exists this change is correct but dormant, and
 per-school manual overrides remain the only way to switch a feature on.
+
+## app/Providers/RouteServiceProvider.php
+
+Fixes the persistent 429 ("The server returned an error (429)") that survived
+reducing client-side polling.
+
+`throttle:api` is an entry in the **`api` middleware group** (`Http/Kernel`),
+which runs *before* the `auth:sanctum` **route** middleware that
+`routes/api.php`'s main group applies. So when the limiter evaluated
+
+```php
+Limit::perMinute(120)->by(optional($request->user())->id ?: $request->ip())
+```
+
+the bearer token had not been resolved yet — `$request->user()` asks the
+default (session) guard and returns null for a token request. Every
+authenticated call therefore keyed by **IP**, and the per-user bucket the
+comment promises never existed.
+
+That is fine on a home connection and severe on mobile: carrier-grade NAT
+puts thousands of subscribers behind one IPv4, so strangers on the same
+carrier were consuming the 120/min bucket. No client-side change could fix
+it, which is why reducing the chat poll rate did not help.
+
+The fix adds `rateLimitKey()`, which asks the sanctum guard explicitly
+(`$request->user('sanctum')`) so the token resolves regardless of middleware
+order, and prefixes the key `user:` / `ip:` so the two key spaces cannot
+collide. All three limiters (`api`, `expensive`, `session_check`) use it.
+
+Deploy to `app/Providers/RouteServiceProvider.php`. Then clear the cached
+config/routes, or the old closure keeps serving:
+
+```
+php artisan optimize:clear
+```
+
+`verify_ratelimit.php` contrasts the old and new key for two different users
+behind one NAT IP and asserts the fix separates them. 10/10 pass.
