@@ -351,31 +351,6 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
     'admin_dashboard.gradebook_review_locked_no_subscription',
     'Gradebook Review needs an active subscription. Contact your account owner to unlock it.',
   );
-  const isClassesSectionsLocked = isFeatureLocked(SUBSCRIPTION_FEATURE_KEYS.classesSections);
-  const classesSectionsLockedMessage = lockedMessageFor(
-    'admin_dashboard.classes_sections_locked_no_subscription',
-    'Classes & Sections needs an active subscription. Contact your account owner to unlock it.',
-  );
-  const isEnrollmentLocked = isFeatureLocked(SUBSCRIPTION_FEATURE_KEYS.enrollment);
-  const enrollmentLockedMessage = lockedMessageFor(
-    'admin_dashboard.enrollment_locked_no_subscription',
-    'Enrollment needs an active subscription. Contact your account owner to unlock it.',
-  );
-  const isAcademicSetupLocked = isFeatureLocked(SUBSCRIPTION_FEATURE_KEYS.academicSetup);
-  const academicSetupLockedMessage = lockedMessageFor(
-    'admin_dashboard.academic_setup_locked_no_subscription',
-    'Academic Setup needs an active subscription. Contact your account owner to unlock it.',
-  );
-  const isAcademicFacilitiesLocked = isFeatureLocked(SUBSCRIPTION_FEATURE_KEYS.academicFacilities);
-  const academicFacilitiesLockedMessage = lockedMessageFor(
-    'admin_dashboard.academic_facilities_locked_no_subscription',
-    'Facilities needs an active subscription. Contact your account owner to unlock it.',
-  );
-  const isAttendanceConfigLocked = isFeatureLocked(SUBSCRIPTION_FEATURE_KEYS.attendanceConfig);
-  const attendanceConfigLockedMessage = lockedMessageFor(
-    'admin_dashboard.attendance_config_locked_no_subscription',
-    'Attendance Config needs an active subscription. Contact your account owner to unlock it.',
-  );
 
   const items: ManageItem[] = [
     {
@@ -453,8 +428,6 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'ClassList',
       icon: (c) => <BookIcon color={c} />,
-      locked: isClassesSectionsLocked,
-      lockedMessage: classesSectionsLockedMessage,
       tint: 'orange',
     },
     {
@@ -484,8 +457,6 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'EnrollmentStages',
       icon: (c) => <StagesIcon color={c} />,
-      locked: isEnrollmentLocked,
-      lockedMessage: enrollmentLockedMessage,
       tint: 'pink',
     },
     {
@@ -496,8 +467,6 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'AcademicYears',
       icon: (c) => <GearIcon color={c} />,
-      locked: isAcademicSetupLocked,
-      lockedMessage: academicSetupLockedMessage,
       tint: 'gray',
     },
     {
@@ -636,8 +605,6 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'AcademicFacilities',
       icon: (c) => <CatalogIcon color={c} />,
-      locked: isAcademicFacilitiesLocked,
-      lockedMessage: academicFacilitiesLockedMessage,
       tint: 'gray',
     },
     {
@@ -738,8 +705,6 @@ export default function AdminDashboard({ footer }: AdminDashboardProps = {}) {
       variant: 'soft',
       route: 'AttendanceConfig',
       icon: (c) => <GearIcon color={c} />,
-      locked: isAttendanceConfigLocked,
-      lockedMessage: attendanceConfigLockedMessage,
       tint: 'teal',
     },
     {

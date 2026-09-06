@@ -53,11 +53,6 @@ export const SUBSCRIPTION_FEATURE_KEYS = {
   gradingSystems: 'grading_systems',
   examCategories: 'exam_categories',
   gradebookReview: 'gradebook_review',
-  classesSections: 'classes_sections',
-  enrollment: 'enrollment',
-  academicSetup: 'academic_setup',
-  academicFacilities: 'academic_facilities',
-  attendanceConfig: 'attendance_config',
 } as const;
 
 export interface StudentAcademicStatus {

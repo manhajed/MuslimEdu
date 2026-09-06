@@ -51,11 +51,6 @@ const FEATURE_OPTIONS: { key: string; label: string }[] = [
   { key: SUBSCRIPTION_FEATURE_KEYS.gradingSystems, label: 'Grading Systems' },
   { key: SUBSCRIPTION_FEATURE_KEYS.examCategories, label: 'Exam Categories' },
   { key: SUBSCRIPTION_FEATURE_KEYS.gradebookReview, label: 'Gradebook Review' },
-  { key: SUBSCRIPTION_FEATURE_KEYS.classesSections, label: 'Classes & Sections' },
-  { key: SUBSCRIPTION_FEATURE_KEYS.enrollment, label: 'Enrollment' },
-  { key: SUBSCRIPTION_FEATURE_KEYS.academicSetup, label: 'Academic Setup' },
-  { key: SUBSCRIPTION_FEATURE_KEYS.academicFacilities, label: 'Facilities' },
-  { key: SUBSCRIPTION_FEATURE_KEYS.attendanceConfig, label: 'Attendance Config' },
 ];
 
 function ChevronLeftIcon({ color }: { color: string }) {
